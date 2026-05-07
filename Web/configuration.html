@@ -1,0 +1,789 @@
+<div id="TanadosUIConfigPage"
+     data-role="page"
+     class="page type-interior pluginConfigurationPage"
+     translate="no" data-jf-no-translate="1">
+
+  <div class="content-primary">
+    <section class="jms-hero-card">
+      <div class="jms-hero-copy">
+        <div class="jms-eyebrow" id="heroEyebrow">Plugin Configuration</div>
+        <h2 id="pageTitle">TanadosUI Control Center</h2>
+        <p id="pageIntro">
+          Manage the <code>/slider</code> asset source, publish global settings, inspect runtime status,
+          and review HTML snippet and web permission details from a cleaner interface.
+        </p>
+      </div>
+
+      <div class="jms-hero-meta">
+        <div class="jms-hero-pill">
+          <span class="jms-hero-pill__label" id="heroLangLabel">Selected Language</span>
+          <strong id="heroLangValue">...</strong>
+        </div>
+        <div class="jms-hero-pill">
+          <span class="jms-hero-pill__label" id="heroRootLabel">Web UI Root</span>
+          <strong id="heroRootValue">/web</strong>
+        </div>
+      </div>
+    </section>
+
+    <div class="jms-tabbar" role="tablist" aria-label="Configuration sections">
+      <button id="tabTanadosUI"
+              type="button"
+              class="jms-tab is-active"
+              role="tab"
+              aria-selected="true"
+              aria-controls="panelTanadosUI"
+              data-tab="TanadosUI">TanadosUI</button>
+      <button id="tabTanadosUISettings"
+              type="button"
+              class="jms-tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panelTanadosUISettings"
+              data-tab="TanadosUI-settings">TanadosUI Settings</button>
+      <button id="tabStatus"
+              type="button"
+              class="jms-tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panelStatus"
+              data-tab="status">Status</button>
+      <button id="tabSnippet"
+              type="button"
+              class="jms-tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panelSnippet"
+              data-tab="snippet">HTML Snippet &amp; Web Path &amp; Permissions</button>
+    </div>
+
+    <div id="msg" class="fieldDescription" style="min-height:24px;"></div>
+
+    <section id="panelTanadosUI"
+             class="jms-panel is-active"
+             data-panel="TanadosUI"
+             role="tabpanel"
+             aria-labelledby="tabTanadosUI">
+      <div class="jms-grid jms-grid--split">
+        <div class="jms-card">
+          <div class="jms-card-head">
+            <h3 id="configCardTitle">Core Settings</h3>
+            <p id="configCardBody">Choose where TanadosUI serves slider assets from and how the player module path is resolved.</p>
+          </div>
+
+          <form id="configForm" onsubmit="return false;">
+            <div class="inputContainer inputContainer--toggle">
+              <label class="inputLabel inputLabel--checkbox" for="forceGlobal">
+                <input id="forceGlobal" type="checkbox">
+                <span id="forceGlobalLabel">Force global user settings</span>
+              </label>
+              <div class="fieldDescription" id="forceGlobalHint">
+                Enabled: all users receive the admin snapshot automatically. Disabled: users keep their own local settings.
+              </div>
+            </div>
+
+            <div class="inputContainer">
+              <label class="inputLabel" id="scriptDirLabel" for="scriptDir">Script Directory</label>
+              <input id="scriptDir" type="text" class="emby-input" placeholder="/home/gkhng/slider">
+              <div class="fieldDescription" id="scriptDirHint">Leave empty to use embedded <code>/Resources/slider</code> assets.</div>
+            </div>
+
+            <div class="inputContainer">
+              <label class="inputLabel" id="playerSubLabel" for="playerSub">Player Subdirectory</label>
+              <input id="playerSub" type="text" class="emby-input" placeholder="modules/player">
+            </div>
+          </form>
+        </div>
+
+        <div class="jms-card">
+          <div class="jms-card-head">
+            <h3 id="actionsCardTitle">Admin Actions</h3>
+            <p id="actionsCardBody">Save plugin settings or publish the current admin snapshot globally for every user profile.</p>
+          </div>
+
+          <div class="buttonContainer">
+            <button id="saveBtn" type="button" class="raised button-submit">Save</button>
+            <button id="publishGlobalBtn" type="button" class="raised">Publish Admin Settings Globally</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panelStatus"
+             class="jms-panel"
+             data-panel="status"
+             role="tabpanel"
+             aria-labelledby="tabStatus"
+             hidden>
+      <div class="jms-grid jms-grid--split">
+        <div class="jms-card">
+          <div class="jms-card-head">
+            <h3 id="statusCardTitle">Runtime Status</h3>
+            <p id="statusCardBody">Quick verification for configuration state, player path resolution, and embedded asset fallback.</p>
+          </div>
+          <div id="status" class="jms-status-list">
+            <div class="jms-empty" id="statusPlaceholder">Status has not been loaded yet.</div>
+          </div>
+        </div>
+
+        <div class="jms-card">
+          <div class="jms-card-head">
+            <h3 id="inmemCardTitle">In-Memory Injection</h3>
+            <p id="inmemCardBody">Checks whether index.html is being rewritten at response time without touching files on disk.</p>
+          </div>
+          <div id="inmem" class="jms-inline-state">
+            Checking in-memory injection...
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panelTanadosUISettings"
+             class="jms-panel"
+             data-panel="TanadosUI-settings"
+             role="tabpanel"
+             aria-labelledby="tabTanadosUISettings"
+             hidden>
+      <div class="jms-card">
+        <div class="jms-card-head">
+          <h3 id="TanadosUISettingsCardTitle">TanadosUI Settings</h3>
+        </div>
+
+        <div class="buttonContainer buttonContainer--tight">
+          <button id="reloadTanadosUISettingsBtn" type="button" class="raised">Reload TanadosUI Settings</button>
+        </div>
+
+        <div id="TanadosUISettingsHost" class="jms-settings-page-host">
+          <div id="TanadosUISettingsPlaceholder" class="jms-empty">TanadosUI settings are loading...</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="panelSnippet"
+             class="jms-panel"
+             data-panel="snippet"
+             role="tabpanel"
+             aria-labelledby="tabSnippet"
+             hidden>
+      <div id="snippetGrid" class="jms-grid jms-grid--split">
+        <div class="jms-card">
+          <div class="jms-card-head">
+            <h3 id="snippetCardTitle">HTML Snippet</h3>
+            <p id="snippetCardBody">The exact snippet TanadosUI injects into Jellyfin web.</p>
+          </div>
+          <div id="snippet" class="jms-code-shell">
+            <div class="jms-empty" id="snippetPlaceholder">Snippet has not been loaded yet.</div>
+          </div>
+        </div>
+
+        <div id="envCard" class="jms-card">
+          <div class="jms-card-head">
+            <h3 id="envCardTitle">Web Path &amp; Permissions</h3>
+            <p id="envCardBody">Detected web root, file write permissions, and suggested ACL commands for patching.</p>
+          </div>
+
+          <div class="buttonContainer buttonContainer--tight">
+            <button id="refreshEnvBtn" type="button" class="raised">Refresh Web Path &amp; Permissions</button>
+            <button id="copyAclBtn" type="button" class="raised">Copy Permission Commands</button>
+            <button id="patchBtn" type="button" class="raised">Patch index.html</button>
+            <button id="unpatchBtn" type="button" class="raised">Unpatch index.html</button>
+          </div>
+
+          <div id="envBox" class="jms-env-box">
+            <div class="jms-env-item">
+              <span class="jms-env-label" id="envUserLabel">Running user</span>
+              <code id="envUser">?</code>
+            </div>
+
+            <div class="jms-env-item">
+              <span class="jms-env-label" id="envWebRootLabel">Detected web root</span>
+              <code id="envWebRoot">?</code>
+            </div>
+
+            <div class="jms-env-files">
+              <div class="jms-env-label" id="envFilesLabel">Files</div>
+              <div class="jms-env-file-row">
+                <code>index.html</code>
+                <span id="envIdx">?</span>
+              </div>
+              <div class="jms-env-file-row">
+                <code>index.html.gz</code>
+                <span id="envGz">?</span>
+              </div>
+              <div class="jms-env-file-row">
+                <code>index.html.br</code>
+                <span id="envBr">?</span>
+              </div>
+            </div>
+
+            <div class="jms-env-acl">
+              <div class="jms-env-label" id="envAclLabel">Suggested ACL commands</div>
+              <pre id="envAcl" class="preformatted">(not computed yet)</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <style>
+#TanadosUIConfigPage {
+  --jms-accent: #00a6a6;
+  --jms-accent-strong: #0d7c86;
+  --jms-accent-soft: rgba(0, 166, 166, 0.14);
+  --jms-gold: #22015f;
+  --jms-gold-soft: rgba(240, 180, 41, 0.15);
+  --jms-danger: #d64550;
+  --jms-danger-soft: rgba(214, 69, 80, 0.14);
+  --jms-success: #7509f0;
+  --jms-success-soft: rgba(31, 157, 104, 0.14);
+  --jms-border: rgba(127, 140, 141, 0.24);
+  --jms-shadow: 0 24px 48px rgba(7, 14, 24, 0.12);
+  --jms-radius-xl: 24px;
+  --jms-radius-lg: 18px;
+  --jms-radius-md: 14px;
+}
+
+.theme-dark #TanadosUIConfigPage {
+  --jms-border: rgba(235, 245, 246, 0.12);
+  --jms-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
+}
+
+#TanadosUIConfigPage .content-primary {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+#TanadosUIConfigPage .jms-hero-card,
+#TanadosUIConfigPage .jms-card {
+  background: var(--cardBackgroundColor);
+  border: 1px solid var(--jms-border);
+  border-radius: var(--jms-radius-xl);
+  box-shadow: var(--jms-shadow);
+}
+
+#TanadosUIConfigPage .jms-hero-card {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: 24px;
+  padding: 28px;
+  background-image:
+    radial-gradient(circle at top right, rgba(240, 180, 41, 0.16), transparent 32%),
+    radial-gradient(circle at left center, rgba(0, 166, 166, 0.15), transparent 38%);
+}
+
+#TanadosUIConfigPage .jms-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--jms-accent-strong);
+}
+
+#TanadosUIConfigPage .jms-eyebrow::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--jms-gold), var(--jms-accent));
+  box-shadow: 0 0 0 6px var(--jms-accent-soft);
+}
+
+#TanadosUIConfigPage #pageTitle {
+  margin: 14px 0 10px;
+  font-size: clamp(28px, 3vw, 42px);
+  line-height: 1.04;
+  color: var(--textColor);
+}
+
+#TanadosUIConfigPage #pageIntro {
+  margin: 0;
+  max-width: 760px;
+  color: var(--labelTextColor);
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+#TanadosUIConfigPage #pageIntro code {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--jms-accent-soft);
+  color: var(--textColor);
+}
+
+#TanadosUIConfigPage .jms-hero-meta {
+  display: grid;
+  gap: 14px;
+  align-content: center;
+}
+
+#TanadosUIConfigPage .jms-hero-pill {
+  padding: 16px 18px;
+  border-radius: var(--jms-radius-lg);
+  border: 1px solid var(--jms-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent);
+}
+
+#TanadosUIConfigPage .jms-hero-pill__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--labelTextColor);
+}
+
+#TanadosUIConfigPage .jms-hero-pill strong {
+  display: block;
+  font-size: 16px;
+  color: var(--textColor);
+  word-break: break-word;
+}
+
+#TanadosUIConfigPage .jms-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0 14px;
+}
+
+#TanadosUIConfigPage .jms-tab {
+  appearance: none;
+  border: 1px solid var(--jms-border);
+  border-radius: 999px;
+  background: var(--cardBackgroundColor);
+  color: var(--textColor);
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+
+#TanadosUIConfigPage .jms-tab:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 166, 166, 0.35);
+}
+
+#TanadosUIConfigPage .jms-tab.is-active {
+  color: #ffffff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--jms-accent-strong), var(--jms-accent));
+  box-shadow: 0 14px 30px rgba(13, 124, 134, 0.28);
+}
+
+#TanadosUIConfigPage .jms-panel {
+  margin-top: 10px;
+}
+
+#TanadosUIConfigPage .jms-panel[hidden] {
+  display: none !important;
+}
+
+#TanadosUIConfigPage .jms-grid {
+  display: grid;
+  gap: 18px;
+}
+
+#TanadosUIConfigPage .jms-grid--split {
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+}
+
+#TanadosUIConfigPage .jms-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#TanadosUIConfigPage .jms-card {
+  padding: 22px;
+}
+
+#TanadosUIConfigPage .jms-card-head {
+  margin-bottom: 18px;
+}
+
+#TanadosUIConfigPage .jms-card-head h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: var(--textColor);
+}
+
+#TanadosUIConfigPage .jms-card-head p {
+  margin: 0;
+  color: var(--labelTextColor);
+  line-height: 1.6;
+}
+
+#TanadosUIConfigPage .inputContainer {
+  margin-bottom: 16px;
+  padding: 18px;
+  border-radius: var(--jms-radius-lg);
+  border: 1px solid var(--jms-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
+}
+
+#TanadosUIConfigPage .inputContainer:last-child {
+  margin-bottom: 0;
+}
+
+#TanadosUIConfigPage .inputLabel {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--textColor);
+  font-weight: 700;
+}
+
+#TanadosUIConfigPage .inputLabel--checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 0;
+}
+
+#TanadosUIConfigPage .inputLabel--checkbox input {
+  margin-top: 2px;
+}
+
+#TanadosUIConfigPage .emby-input {
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--jms-border);
+  background: var(--inputBackgroundColor);
+  color: var(--textColor);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+#TanadosUIConfigPage .emby-input:focus {
+  outline: none;
+  border-color: rgba(0, 166, 166, 0.45);
+  box-shadow: 0 0 0 4px rgba(0, 166, 166, 0.14);
+}
+
+#TanadosUIConfigPage .fieldDescription {
+  margin-top: 10px;
+  color: var(--labelTextColor);
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+#TanadosUIConfigPage #msg {
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: var(--cardBackgroundColor);
+}
+
+#TanadosUIConfigPage #msg.ok {
+  color: var(--jms-success);
+  background: var(--jms-success-soft);
+  border-color: rgba(31, 157, 104, 0.22);
+}
+
+#TanadosUIConfigPage #msg.warn {
+  color: var(--jms-gold);
+  background: var(--jms-gold-soft);
+  border-color: rgba(240, 180, 41, 0.22);
+}
+
+#TanadosUIConfigPage #msg.err {
+  color: var(--jms-danger);
+  background: var(--jms-danger-soft);
+  border-color: rgba(214, 69, 80, 0.22);
+}
+
+#TanadosUIConfigPage .buttonContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+#TanadosUIConfigPage .buttonContainer--tight {
+  margin-bottom: 18px;
+}
+
+#TanadosUIConfigPage .raised {
+  appearance: none;
+  border: 1px solid var(--jms-border);
+  border-radius: 14px;
+  min-height: 46px;
+  padding: 11px 16px;
+  cursor: pointer;
+  font-weight: 700;
+  background: var(--buttonBackgroundColor);
+  color: var(--buttonTextColor);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+#TanadosUIConfigPage .raised:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 166, 166, 0.3);
+}
+
+#TanadosUIConfigPage .button-submit {
+  color: #ffffff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--jms-accent-strong), var(--jms-accent));
+}
+
+#TanadosUIConfigPage .jms-status-list {
+  display: grid;
+  gap: 12px;
+}
+
+#TanadosUIConfigPage .jms-status-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--jms-border);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
+}
+
+#TanadosUIConfigPage .jms-status-label {
+  color: var(--textColor);
+  font-weight: 600;
+}
+
+#TanadosUIConfigPage .jms-status-value {
+  color: var(--labelTextColor);
+  text-align: right;
+}
+
+#TanadosUIConfigPage .jms-status-value code {
+  word-break: break-all;
+}
+
+#TanadosUIConfigPage .jms-inline-state,
+#TanadosUIConfigPage .jms-empty {
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px dashed var(--jms-border);
+  color: var(--labelTextColor);
+  line-height: 1.6;
+}
+
+#TanadosUIConfigPage .jms-inline-state.ok {
+  border-style: solid;
+  color: var(--jms-success);
+  background: var(--jms-success-soft);
+}
+
+#TanadosUIConfigPage .jms-inline-state.warn {
+  border-style: solid;
+  color: var(--jms-gold);
+  background: var(--jms-gold-soft);
+}
+
+#TanadosUIConfigPage .jms-inline-toggle {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--jms-border);
+}
+
+#TanadosUIConfigPage .jms-inline-toggle .inputLabel--checkbox,
+#TanadosUIConfigPage .jms-inline-toggle .fieldDescription {
+  color: inherit;
+}
+
+#TanadosUIConfigPage .jms-inline-toggle .fieldDescription {
+  margin-top: 0;
+  opacity: 0.92;
+}
+
+#TanadosUIConfigPage .jms-empty--error {
+  border-style: solid;
+  color: var(--jms-danger);
+  background: var(--jms-danger-soft);
+}
+
+#TanadosUIConfigPage .jms-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+#TanadosUIConfigPage .jms-badge.is-good {
+  color: var(--jms-success);
+  background: var(--jms-success-soft);
+}
+
+#TanadosUIConfigPage .jms-badge.is-bad {
+  color: var(--jms-danger);
+  background: var(--jms-danger-soft);
+}
+
+#TanadosUIConfigPage .jms-badge.is-warn {
+  color: var(--jms-gold);
+  background: var(--jms-gold-soft);
+}
+
+#TanadosUIConfigPage .jms-code-shell,
+#TanadosUIConfigPage .jms-env-box,
+#TanadosUIConfigPage pre.preformatted {
+  border-radius: 16px;
+  border: 1px solid var(--jms-border);
+  background: var(--inputBackgroundColor);
+}
+
+#TanadosUIConfigPage .jms-code-shell {
+  overflow: hidden;
+}
+
+#TanadosUIConfigPage .jms-code-shell pre,
+#TanadosUIConfigPage .jms-code-shell code,
+#TanadosUIConfigPage pre.preformatted {
+  margin: 0;
+  padding: 16px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--textColor);
+}
+
+#TanadosUIConfigPage .jms-env-box {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+}
+
+#TanadosUIConfigPage .jms-env-item {
+  display: grid;
+  gap: 8px;
+}
+
+#TanadosUIConfigPage .jms-env-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--labelTextColor);
+  font-weight: 700;
+}
+
+#TanadosUIConfigPage .jms-env-item code,
+#TanadosUIConfigPage .jms-env-file-row code {
+  padding: 3px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--textColor);
+  font-family: Consolas, Monaco, monospace;
+}
+
+#TanadosUIConfigPage .jms-env-files {
+  display: grid;
+  gap: 12px;
+}
+
+#TanadosUIConfigPage .jms-env-file-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+#TanadosUIConfigPage .jms-env-file-row span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#TanadosUIConfigPage .ok {
+  color: var(--jms-success);
+}
+
+#TanadosUIConfigPage .warn {
+  color: var(--jms-gold);
+}
+
+#TanadosUIConfigPage .jms-settings-page-host {
+  min-height: 360px;
+}
+
+#TanadosUIConfigPage .jms-settings-page-host > #settings-modal.jms-settings-page-shell {
+  display: block !important;
+  position: relative !important;
+  inset: auto !important;
+  padding: 0 !important;
+  background: transparent !important;
+  animation: none !important;
+}
+
+#TanadosUIConfigPage .jms-settings-page-host > #settings-modal.jms-settings-page-shell .settings-modal-content {
+  width: 100% !important;
+  max-width: none !important;
+  height: min(94vh, 980px) !important;
+  max-height: min(94vh, 980px) !important;
+  box-shadow: none !important;
+}
+
+#TanadosUIConfigPage .jms-settings-page-host > #settings-modal.jms-settings-page-shell .settings-modal-content h2 {
+  display: none !important;
+}
+
+#TanadosUIConfigPage .jms-settings-page-host > #settings-modal.jms-settings-page-shell form,
+#TanadosUIConfigPage .jms-settings-page-host > #settings-modal.jms-settings-page-shell .settings-tabs,
+#TanadosUIConfigPage .jms-settings-page-host > #settings-modal.jms-settings-page-shell .settings-tab-content {
+  min-height: 0 !important;
+}
+
+@media (max-width: 900px) {
+  #TanadosUIConfigPage .jms-hero-card,
+  #TanadosUIConfigPage .jms-grid--split {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  #TanadosUIConfigPage .content-primary {
+    padding: 14px;
+  }
+
+  #TanadosUIConfigPage .jms-hero-card,
+  #TanadosUIConfigPage .jms-card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  #TanadosUIConfigPage .buttonContainer {
+    flex-direction: column;
+  }
+
+  #TanadosUIConfigPage .raised,
+  #TanadosUIConfigPage .jms-tab {
+    width: 100%;
+  }
+
+  #TanadosUIConfigPage .jms-status-row,
+  #TanadosUIConfigPage .jms-env-file-row {
+    grid-template-columns: 1fr;
+  }
+
+  #TanadosUIConfigPage .jms-status-value {
+    text-align: left;
+  }
+
+  #TanadosUIConfigPage .jms-settings-page-host > #settings-modal.jms-settings-page-shell .settings-modal-content {
+    height: min(86vh, 1100px) !important;
+    max-height: min(86vh, 1100px) !important;
+  }
+}
+</style>
+  <script src="../Plugins/TanadosUI/assets/UiJs" type="text/javascript" data-jf-no-translate="1"></script>
+</div>

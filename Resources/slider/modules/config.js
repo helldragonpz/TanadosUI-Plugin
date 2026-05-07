@@ -1,0 +1,1476 @@
+import { getLanguageLabels, getDefaultLanguage, getStoredLanguagePreference } from '../language/index.js';
+
+let __globalOverride =
+  (typeof window !== "undefined" && window.__JMS_MANAGED_STORAGE__?.bootstrapOverride)
+    ? window.__JMS_MANAGED_STORAGE__.bootstrapOverride
+    : null;
+let __globalApplied = false;
+export const SETTINGS_HOTKEY_DEFAULT = "F2";
+export const DEFAULT_MANAGED_HOME_SECTION_ORDER = Object.freeze([
+  "studioHubs",
+  "personalRecommendations",
+  "top10SeriesRows",
+  "top10MovieRows",
+  "tmdbTopMoviesRows",
+  "recentRows",
+  "continueRows",
+  "nextUpRows",
+  "becauseYouWatched",
+  "genreHubs",
+  "directorRows"
+]);
+export const NATIVE_HOME_SECTION_ORDER_PREFIX = "native:";
+
+const MANAGED_HOME_SECTION_ORDER_SET = new Set(DEFAULT_MANAGED_HOME_SECTION_ORDER);
+
+const SETTINGS_HOTKEY_ALIASES = new Map([
+  [" ", "Space"],
+  ["Spacebar", "Space"],
+  ["Esc", "Escape"],
+  ["Del", "Delete"],
+  ["Left", "ArrowLeft"],
+  ["Right", "ArrowRight"],
+  ["Up", "ArrowUp"],
+  ["Down", "ArrowDown"]
+]);
+
+const SETTINGS_HOTKEY_ALLOWED_KEYS = new Set([
+  "Backspace",
+  "Delete",
+  "End",
+  "Enter",
+  "Escape",
+  "Home",
+  "Insert",
+  "PageDown",
+  "PageUp",
+  "Space",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowUp"
+]);
+
+const SETTINGS_HOTKEY_MODIFIER_KEYS = new Set([
+  "Alt",
+  "AltGraph",
+  "CapsLock",
+  "Control",
+  "Fn",
+  "Hyper",
+  "Meta",
+  "NumLock",
+  "OS",
+  "ScrollLock",
+  "Shift",
+  "Super",
+  "Symbol"
+]);
+
+export function isNativeHomeSectionOrderKey(value) {
+  return String(value || "").trim().startsWith(NATIVE_HOME_SECTION_ORDER_PREFIX);
+}
+
+export function normalizeManagedCardTitleDisplayMode(value) {
+  const raw = String(value || "").trim().toLowerCase();
+  switch (raw) {
+    case "logo":
+    case "logoonly":
+    case "logo-only":
+      return "logo";
+    case "title":
+    case "titleonly":
+    case "title-only":
+      return "title";
+    case "logotitle":
+    case "logo-title":
+    case "logoandtitle":
+    case "logo-and-title":
+    case "both":
+      return "logoTitle";
+    case "none":
+      return "none";
+    default:
+      return "logoTitle";
+  }
+}
+
+function isRecognizedManagedHomeSectionOrderKey(value) {
+  const key = String(value || "").trim();
+  return !!key && (
+    MANAGED_HOME_SECTION_ORDER_SET.has(key) ||
+    isNativeHomeSectionOrderKey(key)
+  );
+}
+
+export function normalizeManagedHomeSectionOrder(value = null, { nativeEntries } = {}) {
+  const hasNativeEntries = Array.isArray(nativeEntries);
+  const nativeEntryKeys = hasNativeEntries
+    ? new Set(
+        nativeEntries
+          .map((entry) => (
+            typeof entry === "string"
+              ? entry
+              : (entry && typeof entry === "object" ? entry.name : "")
+          ))
+          .map((entry) => String(entry || "").trim())
+          .filter((entry) => isNativeHomeSectionOrderKey(entry))
+      )
+    : null;
+  const out = [];
+  const seen = new Set();
+  const explicit = new Set();
+
+  const push = (entry, fromExplicit = false) => {
+    const key = String(entry || "").trim();
+    if (
+      !key ||
+      seen.has(key) ||
+      !isRecognizedManagedHomeSectionOrderKey(key) ||
+      (hasNativeEntries && isNativeHomeSectionOrderKey(key) && !nativeEntryKeys.has(key))
+    ) {
+      return;
+    }
+    seen.add(key);
+    if (fromExplicit) explicit.add(key);
+    out.push(key);
+  };
+
+  if (Array.isArray(value)) {
+    value.forEach((entry) => push(entry, true));
+  } else if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((entry) => push(entry, true));
+      } else {
+        value.split(",").forEach((entry) => push(entry, true));
+      }
+    } catch {
+      value.split(",").forEach((entry) => push(entry, true));
+    }
+  }
+
+  if (hasNativeEntries) {
+    nativeEntries.forEach((entry) => {
+      const key = (typeof entry === "string")
+        ? entry
+        : (entry && typeof entry === "object" ? entry.name : "");
+      push(key, false);
+    });
+  }
+
+  DEFAULT_MANAGED_HOME_SECTION_ORDER.forEach(push);
+
+  ensureImplicitManagedFollowerOrder(out, explicit, "recentRows", "continueRows");
+  ensureImplicitManagedFollowerOrder(out, explicit, "continueRows", "nextUpRows");
+
+  return out;
+}
+
+function isRecentRowsSectionEnabled(cfg = {}, masterEnabled = cfg?.enableHomeSectionsMaster !== false) {
+  const recentMasterEnabled = masterEnabled && cfg?.enableRecentRows !== false;
+  const hasRecentContent =
+    recentMasterEnabled &&
+    (
+      cfg?.enableRecentMoviesRow !== false ||
+      cfg?.enableRecentSeriesRow !== false ||
+      cfg?.enableRecentEpisodesRow !== false ||
+      cfg?.enableRecentMusicRow !== false
+    );
+
+  return hasRecentContent || (masterEnabled && cfg?.enableOtherLibRows === true);
+}
+
+function isTop10SeriesRowsSectionEnabled(cfg = {}, masterEnabled = cfg?.enableHomeSectionsMaster !== false) {
+  return masterEnabled && cfg?.enableRecentRows !== false && cfg?.enableTop10SeriesRow !== false;
+}
+
+function isTop10MovieRowsSectionEnabled(cfg = {}, masterEnabled = cfg?.enableHomeSectionsMaster !== false) {
+  return masterEnabled && cfg?.enableRecentRows !== false && cfg?.enableTop10MoviesRow !== false;
+}
+
+function isTmdbTopMoviesRowsSectionEnabled(cfg = {}, masterEnabled = cfg?.enableHomeSectionsMaster !== false) {
+  return masterEnabled && cfg?.enableRecentRows !== false && cfg?.enableTmdbTopMoviesRow !== false;
+}
+
+function isContinueRowsSectionEnabled(cfg = {}, masterEnabled = cfg?.enableHomeSectionsMaster !== false) {
+  const recentMasterEnabled = masterEnabled && cfg?.enableRecentRows !== false;
+  const hasRecentTracks = recentMasterEnabled && cfg?.enableRecentMusicTracksRow !== false;
+  const hasContinueContent =
+    masterEnabled &&
+    (
+      cfg?.enableContinueMovies !== false ||
+      cfg?.enableContinueSeries !== false
+    );
+
+  return hasRecentTracks || hasContinueContent || (masterEnabled && cfg?.enableOtherLibRows === true);
+}
+
+function isNextUpRowsSectionEnabled(cfg = {}, masterEnabled = cfg?.enableHomeSectionsMaster !== false) {
+  const recentMasterEnabled = masterEnabled && cfg?.enableRecentRows !== false;
+  return recentMasterEnabled && cfg?.enableNextUpRow !== false;
+}
+
+function ensureImplicitManagedFollowerOrder(out, explicit, anchorKey, followerKey) {
+  if (explicit.has(followerKey)) return;
+  const anchorIndex = out.indexOf(anchorKey);
+  const followerIndex = out.indexOf(followerKey);
+  if (anchorIndex < 0 || followerIndex < 0 || followerIndex === (anchorIndex + 1)) {
+    return;
+  }
+
+  out.splice(followerIndex, 1);
+  const nextAnchorIndex = out.indexOf(anchorKey);
+  if (nextAnchorIndex < 0) {
+    out.push(followerKey);
+    return;
+  }
+  out.splice(nextAnchorIndex + 1, 0, followerKey);
+}
+
+function buildManagedHomeSectionEnabledMap(cfg = {}) {
+  const masterEnabled = cfg?.enableHomeSectionsMaster !== false;
+  return {
+    studioHubs: masterEnabled && cfg?.enableStudioHubs !== false,
+    personalRecommendations: masterEnabled && cfg?.enablePersonalRecommendations !== false,
+    top10SeriesRows: isTop10SeriesRowsSectionEnabled(cfg, masterEnabled),
+    top10MovieRows: isTop10MovieRowsSectionEnabled(cfg, masterEnabled),
+    tmdbTopMoviesRows: isTmdbTopMoviesRowsSectionEnabled(cfg, masterEnabled),
+    recentRows: isRecentRowsSectionEnabled(cfg, masterEnabled),
+    continueRows: isContinueRowsSectionEnabled(cfg, masterEnabled),
+    nextUpRows: isNextUpRowsSectionEnabled(cfg, masterEnabled),
+    becauseYouWatched: masterEnabled && cfg?.enableBecauseYouWatched !== false,
+    genreHubs: masterEnabled && cfg?.enableGenreHubs !== false,
+    directorRows: masterEnabled && cfg?.enableDirectorRows !== false,
+  };
+}
+
+export function getManagedHomeSectionRuntimeOrder(source = null, { enabledOnly = false } = {}) {
+  const cfg = source || getConfig() || {};
+  const order = normalizeManagedHomeSectionOrder(cfg?.managedHomeSectionOrder);
+  if (!enabledOnly) {
+    return order;
+  }
+
+  const enabledMap = buildManagedHomeSectionEnabledMap(cfg);
+  return order.filter((key) => enabledMap[key] === true);
+}
+
+function getManagedStorageBridge() {
+  try {
+    return (typeof window !== "undefined" && window.__JMS_MANAGED_STORAGE__)
+      ? window.__JMS_MANAGED_STORAGE__
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function registerManagedStorageKeys(keys = []) {
+  try {
+    getManagedStorageBridge()?.registerKeys?.(keys);
+  } catch {}
+}
+
+function maybeBootstrapManagedStorage(snapshot) {
+  try {
+    getManagedStorageBridge()?.maybeBootstrapFromLocal?.(snapshot);
+  } catch {}
+}
+
+export function normalizeSettingsHotkey(value, fallback = SETTINGS_HOTKEY_DEFAULT) {
+  if (value === " ") return "Space";
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return fallback;
+
+  const aliased = SETTINGS_HOTKEY_ALIASES.get(raw) || raw;
+  if (SETTINGS_HOTKEY_MODIFIER_KEYS.has(aliased)) return fallback;
+
+  if (/^F(?:[1-9]|1[0-9]|2[0-4])$/i.test(aliased)) {
+    return aliased.toUpperCase();
+  }
+
+  if (SETTINGS_HOTKEY_ALLOWED_KEYS.has(aliased)) {
+    return aliased;
+  }
+
+  if (aliased.length === 1 && /\S/.test(aliased)) {
+    return aliased.toUpperCase();
+  }
+
+  return fallback;
+}
+
+export function getSettingsHotkey() {
+  try {
+    return normalizeSettingsHotkey(localStorage.getItem("settingsHotkey"));
+  } catch {
+    return SETTINGS_HOTKEY_DEFAULT;
+  }
+}
+
+export function getDeviceProfileAuto() {
+  try {
+    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches === true;
+    const small = window.matchMedia?.("(max-width: 900px)")?.matches === true;
+    const uaMobile = /Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return (coarse || (small && uaMobile)) ? "mobile" : "desktop";
+  } catch {
+    return "desktop";
+  }
+}
+
+export function getAdminTargetProfile() {
+  const v = (localStorage.getItem("jms:settingsTargetProfile") || "auto").toLowerCase();
+  if (v === "mobile" || v === "desktop") return v;
+  return getDeviceProfileAuto();
+}
+
+async function __fetchGlobalOverride(force = false) {
+  if (!force && __globalOverride !== null) return __globalOverride;
+  const managed = getManagedStorageBridge();
+  if (!force && managed?.bootstrapOverride) {
+    __globalOverride = managed.bootstrapOverride;
+    return __globalOverride;
+  }
+  try {
+    const profile = getDeviceProfileAuto();
+    const r = await fetch(`/Plugins/TanadosUI/UserSettings?ts=${Date.now()}&profile=${profile}`, {
+    });
+    if (!r.ok) throw new Error();
+    __globalOverride = await r.json();
+  } catch {
+    __globalOverride = { forceGlobal: false };
+  }
+  return __globalOverride;
+}
+
+function _takeBackupOnce(keys) {
+  try {
+    const key = "jf:globalBackup:v2";
+    if (localStorage.getItem(key)) return;
+    const snap = {};
+    (keys || []).forEach(k => {
+      snap[k] = localStorage.getItem(k);
+    });
+    localStorage.setItem(key, JSON.stringify(snap));
+  } catch {}
+}
+
+function _restoreBackupIfAny() {
+  try {
+    const key = "jf:globalBackup:v2";
+    const raw = localStorage.getItem(key);
+    if (!raw) return false;
+    const snap = JSON.parse(raw || "{}");
+
+    for (const [k, v] of Object.entries(snap)) {
+      if (v === null || v === undefined) localStorage.removeItem(k);
+      else localStorage.setItem(k, String(v));
+    }
+
+    localStorage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function _setLsSmart(k, v) {
+  if (String(k).startsWith("jf:")) return;
+
+  if (v === undefined) return;
+  if (v === null) {
+    localStorage.removeItem(k);
+    return;
+  }
+  if (typeof v === "object") {
+    localStorage.setItem(k, JSON.stringify(v));
+  } else {
+    localStorage.setItem(k, String(v));
+  }
+}
+
+function _num(v, d=0){ const n = Number(v); return Number.isFinite(n) ? n : d; }
+function _bool(v, d=false){ return v === 'true' ? true : (v === 'false' ? false : d); }
+function _trimSlashesEnd(s){ return String(s || '').replace(/\/+$/, ''); }
+
+function readSmartAutoPause() {
+  const raw = localStorage.getItem('smartAutoPause');
+  if (raw && raw.trim().startsWith('{') && raw !== '[object Object]') {
+    try {
+      const j = JSON.parse(raw);
+      return {
+        enabled: j.enabled !== false,
+        blurMinutes: _num(j.blurMinutes, 0.5),
+        hiddenMinutes: _num(j.hiddenMinutes, 0.2),
+        idleMinutes: _num(j.idleMinutes, 45),
+        useIdleDetection: j.useIdleDetection !== false,
+        respectPiP: j.respectPiP !== false,
+        ignoreShortUnderSec: _num(j.ignoreShortUnderSec, 300)
+      };
+    } catch {}
+  }
+  const idleMs = _num(localStorage.getItem('idleThresholdMs'), 0);
+  const unfocusMs = _num(localStorage.getItem('unfocusedThresholdMs'), 0);
+  const offscreenMs = _num(localStorage.getItem('offscreenThresholdMs'), 0);
+  const useIdle = _bool(localStorage.getItem('useIdleDetection'), true);
+  const respectPiP = _bool(localStorage.getItem('respectPiP'), true);
+  const ignoreShort = _num(localStorage.getItem('ignoreShortUnderSec'), 300);
+
+  const sapLegacy = {
+    enabled: true,
+    blurMinutes: unfocusMs > 0 ? (unfocusMs / 60000) : (500 / 60000),
+    hiddenMinutes: offscreenMs > 0 ? (offscreenMs / 60000) : (500 / 60000),
+    idleMinutes: idleMs > 0 ? (idleMs / 60000) : 45,
+    useIdleDetection: useIdle,
+    respectPiP: respectPiP,
+    ignoreShortUnderSec: ignoreShort
+  };
+  try { localStorage.setItem('smartAutoPause', JSON.stringify(sapLegacy)); } catch {}
+  return sapLegacy;
+}
+
+export function getConfig() {
+  const forceGlobal = __globalOverride?.forceGlobal === true;
+  if (window.__JMS_GLOBAL_CONFIG__) {
+    return window.__JMS_GLOBAL_CONFIG__;
+  }
+
+  function readPeakSlider() {
+  const variant = (localStorage.getItem('cssVariant') || 'normalslider').toLowerCase();
+  const isPeakLike = ['peak', 'peakslider', 'peak-skin'].includes(variant);
+  if (variant) return isPeakLike;
+  const explicit = localStorage.getItem('peakSlider');
+  return explicit === 'true';
+}
+  function readDotPreviewMode() {
+    try {
+      const v = localStorage.getItem('dotPreviewPlaybackMode');
+      if (!v || v === '[object Object]') return null;
+      if (v === 'trailer' || v === 'video' || v === 'onlyTrailer') return v;
+      localStorage.removeItem('dotPreviewPlaybackMode');
+      return null;
+    } catch {
+      return null;
+    }
+  }
+  function normalizePreviewPlaybackMode(value) {
+    if (
+      value === 'trailer' ||
+      value === 'video' ||
+      value === 'trailerThenVideo' ||
+      value === 'none'
+    ) {
+      return value;
+    }
+    return null;
+  }
+  function readPreviewPlaybackMode() {
+    try {
+      const stored = localStorage.getItem('previewPlaybackMode');
+      const normalizedStored = normalizePreviewPlaybackMode(stored);
+      if (normalizedStored) return normalizedStored;
+      if (stored && stored !== '[object Object]') {
+        localStorage.removeItem('previewPlaybackMode');
+      }
+
+      let fallback = null;
+      if (localStorage.getItem('disableAllPlayback') === 'true') {
+        fallback = 'none';
+      } else if (localStorage.getItem('enableTrailerThenVideo') === 'true') {
+        fallback = 'trailerThenVideo';
+      } else if (localStorage.getItem('enableTrailerPlayback') === 'true') {
+        fallback = 'trailer';
+      } else if (localStorage.getItem('enableVideoPlayback') === 'true') {
+        fallback = 'video';
+      } else {
+        const legacy = localStorage.getItem('previewTrailerEnabled');
+        if (legacy === 'true') fallback = 'trailer';
+        else if (legacy === 'false') fallback = 'video';
+      }
+
+      const resolved = fallback || 'video';
+      localStorage.setItem('previewPlaybackMode', resolved);
+      return resolved;
+    } catch {
+      return 'video';
+    }
+  }
+  function readPauseOverlay() {
+  const fallbackShowOsdHeaderRatings = localStorage.getItem('showRatingInfo') !== 'false';
+  const fallbackShowOsdHeaderCommunityRating = localStorage.getItem('showCommunityRating') !== 'false';
+  const fallbackShowOsdHeaderCriticRating = localStorage.getItem('showCriticRating') !== 'false';
+  const fallbackShowOsdHeaderOfficialRating = localStorage.getItem('showOfficialRating') !== 'false';
+  const normalizePauseOverlayCssVariant = (value) =>
+    String(value || '').trim() === 'pauseModul2' ? 'pauseModul2' : 'pauseModul';
+  const readPauseBool = (obj, key, fallback) =>
+    Object.prototype.hasOwnProperty.call(obj || {}, key)
+      ? obj[key] !== false
+      : fallback;
+  const raw = localStorage.getItem('pauseOverlay');
+  if (raw && raw.trim().startsWith('{') && raw !== '[object Object]') {
+    try {
+      const j = JSON.parse(raw);
+      const mv = _num(j.minVideoMinutes, 5);
+      const safeMin = Math.max(1, mv);
+      const cfg = {
+        enabled: j.enabled !== false,
+        cssVariant: normalizePauseOverlayCssVariant(j.cssVariant),
+        imagePreference: j.imagePreference || 'auto',
+        showPlot: j.showPlot !== false,
+        debug: j.debug !== false,
+        requireWebSocket: j.requireWebSocket !== false,
+        showMetadata: j.showMetadata !== false,
+        showLogo: j.showLogo !== false,
+        closeOnMouseMove: j.closeOnMouseMove !== false,
+        showBackdrop: j.showBackdrop !== false,
+        showOsdHeaderRatings: readPauseBool(j, 'showOsdHeaderRatings', fallbackShowOsdHeaderRatings),
+        showOsdHeaderCommunityRating: readPauseBool(j, 'showOsdHeaderCommunityRating', fallbackShowOsdHeaderCommunityRating),
+        showOsdHeaderCriticRating: readPauseBool(j, 'showOsdHeaderCriticRating', fallbackShowOsdHeaderCriticRating),
+        showOsdHeaderOfficialRating: readPauseBool(j, 'showOsdHeaderOfficialRating', fallbackShowOsdHeaderOfficialRating),
+        minVideoMinutes: safeMin,
+        ageBadgeDurationMs: _num(j.ageBadgeDurationMs, 12000),
+        ageBadgeLockMs: _num(j.ageBadgeLockMs, 6000),
+        showAgeBadge: j.showAgeBadge !== false,
+        badgeDelayMs: _num(j.badgeDelayMs, 5000),
+        badgeDelayResumeMs: _num(j.badgeDelayResumeMs, 2000),
+        ageBadgeDurationResumeMs: _num(j.ageBadgeDurationResumeMs, 10000),
+      };
+      const missingOsdRatingKeys = [
+        'showOsdHeaderRatings',
+        'showOsdHeaderCommunityRating',
+        'showOsdHeaderCriticRating',
+        'showOsdHeaderOfficialRating'
+      ].some(key => !Object.prototype.hasOwnProperty.call(j, key));
+      if (
+        safeMin !== mv ||
+        missingOsdRatingKeys ||
+        normalizePauseOverlayCssVariant(j.cssVariant) !== String(j.cssVariant || '')
+      ) {
+        try { localStorage.setItem('pauseOverlay', JSON.stringify(cfg)); } catch {}
+      }
+      return cfg;
+    } catch {}
+  }
+
+  const rawCssVariant = localStorage.getItem('pauseOverlayCssVariant');
+  const rawImagePref = localStorage.getItem('pauseOverlayImagePreference');
+  const rawShowPlot = localStorage.getItem('pauseOverlayShowPlot');
+  const rawShowMeta = localStorage.getItem('pauseOverlayShowMetadata');
+  const rawShowLogo = localStorage.getItem('pauseOverlayShowLogo');
+  const rawDebug = localStorage.getItem('pauseOverlayDebug');
+  const rawShowBackdrop = localStorage.getItem('pauseOverlayShowBackdrop');
+  const rawRequireWebSocket = localStorage.getItem('pauseOverlayRequireWebSocket');
+  const rawMinVideoMin = localStorage.getItem('pauseOverlayMinVideoMinutes');
+  const rawCloseOnMouse = localStorage.getItem('closeOnMouseMove');
+
+  const mvLegacy = _num(rawMinVideoMin, 5);
+  const safeMinLegacy = Math.max(1, mvLegacy);
+
+  const legacy = {
+    enabled: raw !== 'false',
+    cssVariant: normalizePauseOverlayCssVariant(rawCssVariant),
+    imagePreference: rawImagePref || 'auto',
+    showPlot: rawShowPlot !== 'false',
+    debug: rawDebug !== 'false',
+    showMetadata: rawShowMeta !== 'false',
+    showLogo: rawShowLogo !== 'false',
+    showBackdrop: rawShowBackdrop !== 'false',
+    requireWebSocket: rawRequireWebSocket !== 'false',
+    closeOnMouseMove: rawCloseOnMouse !== 'false',
+    showOsdHeaderRatings: fallbackShowOsdHeaderRatings,
+    showOsdHeaderCommunityRating: fallbackShowOsdHeaderCommunityRating,
+    showOsdHeaderCriticRating: fallbackShowOsdHeaderCriticRating,
+    showOsdHeaderOfficialRating: fallbackShowOsdHeaderOfficialRating,
+    minVideoMinutes: safeMinLegacy,
+    ageBadgeDurationMs: 12000,
+    ageBadgeLockMs: 6000,
+    badgeDelayMs: 6000,
+    badgeDelayResumeMs: 800,
+    ageBadgeDurationResumeMs: 5000,
+    showAgeBadge: true,
+  };
+
+  try { localStorage.setItem('pauseOverlay', JSON.stringify(legacy)); } catch {}
+  return legacy;
+}
+
+  const defaultLanguage = getDefaultLanguage();
+  const previewPlaybackMode = readPreviewPlaybackMode();
+  const disableAllPlayback = previewPlaybackMode === 'none';
+  const enableTrailerPlayback = previewPlaybackMode === 'trailer';
+  const enableVideoPlayback = previewPlaybackMode === 'video';
+  const enableTrailerThenVideo = previewPlaybackMode === 'trailerThenVideo';
+  try { localStorage.removeItem('enableHls'); } catch {}
+  const resolvedConfig = {
+    customQueryString: localStorage.getItem('customQueryString') || 'IncludeItemTypes=Movie,Series&Recursive=true&hasOverview=true&imageTypes=Logo,Backdrop&sortBy=DateCreated&sortOrder=Descending',
+    sortingKeywords: (() => {
+      const raw = localStorage.getItem('sortingKeywords');
+      try {
+        return raw ? JSON.parse(raw) : ["DateCreated","PremiereDate","ProductionYear","Random"];
+      } catch {
+        return raw ? raw.split(',').map(k => k.trim()) : ["DateCreated","PremiereDate","ProductionYear","Random"];
+      }
+    })(),
+    enableSlider: localStorage.getItem('enableSlider') !== 'false',
+    onlyShowSliderOnHomeTab: localStorage.getItem('onlyShowSliderOnHomeTab') !== 'false',
+    showLanguageInfo: localStorage.getItem('showLanguageInfo') !== 'false',
+    balanceItemTypes: localStorage.getItem('balanceItemTypes') !== 'false',
+    showRatingInfo: localStorage.getItem('showRatingInfo') !== 'false',
+    showMatchPercentage: localStorage.getItem('showMatchPercentage') !== 'false',
+    metaIconColors: localStorage.getItem('metaIconColors') === 'true' ? true : false,
+    showProviderInfo: localStorage.getItem('showProviderInfo') !== 'false',
+    showDotNavigation: localStorage.getItem('showDotNavigation') !== 'false',
+    showSettingsLink: localStorage.getItem("showSettingsLink") !== "false",
+    settingsHotkey: getSettingsHotkey(),
+    showMusicIcon: localStorage.getItem("showMusicIcon") !== "false",
+    showLogoOrTitle: localStorage.getItem('showLogoOrTitle') !== 'false',
+    showTitleOnly: localStorage.getItem('showTitleOnly') === 'true' ? true : false,
+    showDiscOnly: localStorage.getItem('showDiscOnly') === 'true' ? true : false,
+    displayOrder: localStorage.getItem('displayOrder') || 'logo,disk,originalTitle',
+    showCommunityRating: localStorage.getItem('showCommunityRating') !== 'false',
+    showCriticRating: localStorage.getItem('showCriticRating') !== 'false',
+    showOfficialRating: localStorage.getItem('showOfficialRating') !== 'false',
+    showStatusInfo: localStorage.getItem('showStatusInfo') !== 'false',
+    showTypeInfo: localStorage.getItem('showTypeInfo') !== 'false',
+    showWatchedInfo: localStorage.getItem('showWatchedInfo') !== 'false',
+    showRuntimeInfo: localStorage.getItem('showRuntimeInfo') !== 'false',
+    showQualityInfo: localStorage.getItem('showQualityInfo') !== 'false',
+    showProgressBar: false,
+    showProgressAsSeconds: localStorage.getItem('showProgressAsSeconds') === 'true',
+    showQualityDetail: localStorage.getItem('showQualityDetail') !== 'false',
+    showActorInfo: localStorage.getItem('showActorInfo') === 'true',
+    showActorAll: localStorage.getItem('showActorAll') !== 'false',
+    showActorImg: localStorage.getItem('showActorImg') === 'true',
+    showActorRole: localStorage.getItem('showActorRole') === 'true',
+    showDescriptions: localStorage.getItem('showDescriptions') !== 'false',
+    showPlotInfo: localStorage.getItem('showPlotInfo') !== 'false',
+    showSloganInfo: localStorage.getItem('showSloganInfo') !== 'false',
+    showTitleInfo: localStorage.getItem('showTitleInfo') !== 'false',
+    showOriginalTitleInfo: localStorage.getItem('showOriginalTitleInfo') !== 'false',
+    showDirectorWriter: localStorage.getItem("showDirectorWriter") !== "false",
+    showDirector: localStorage.getItem("showDirector") !== "false",
+    showWriter: localStorage.getItem("showWriter") !== "false",
+    showInfo: localStorage.getItem("showInfo") !== "false",
+    showGenresInfo: localStorage.getItem("showGenresInfo") !== "false",
+    showYearInfo: localStorage.getItem("showYearInfo") !== "false",
+    showCountryInfo: localStorage.getItem("showCountryInfo") !== "false",
+    showTrailerButton: localStorage.getItem('showTrailerButton') !== 'false',
+    showTrailerIcon: localStorage.getItem('showTrailerIcon') !== 'false',
+    showWatchButton: localStorage.getItem('showWatchButton') !== 'false',
+    manualBackdropSelection: localStorage.getItem('manualBackdropSelection') === 'true',
+    indexZeroSelection: localStorage.getItem('indexZeroSelection') !== 'false',
+    showFavoriteButton: localStorage.getItem('showFavoriteButton') !== 'false',
+    watchlistTabsSliderEnabled: localStorage.getItem('watchlistTabsSliderEnabled') !== 'false',
+    watchlistAutoRemovePlayed: localStorage.getItem('watchlistAutoRemovePlayed') === 'true',
+    watchlistAutoRemovePlayedFromFavorites: localStorage.getItem('watchlistAutoRemovePlayedFromFavorites') === 'true',
+    watchlistImportFavoritesOnStartup: localStorage.getItem('watchlistImportFavoritesOnStartup') === 'true',
+    showPlayedButton: localStorage.getItem('showPlayedButton') !== 'false',
+    showCast: localStorage.getItem('showCast') !== 'false',
+    detailUrl: localStorage.getItem('detailUrl') !== 'false',
+    hideOriginalTitleIfSame: localStorage.getItem('hideOriginalTitleIfSame') === 'true',
+    backdropImageType: localStorage.getItem('backdropImageType') || 'backdropUrl',
+    previewPlaybackMode,
+    enableTrailerPlayback,
+    enableVideoPlayback,
+    dotBackgroundImageType: localStorage.getItem('dotBackgroundImageType') || 'none',
+    dotVisibleCount: (() => {
+      const v = localStorage.getItem('dotVisibleCount');
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) ? Math.max(0, n) : 0;
+    })(),
+    trailerBackgroundImageType: localStorage.getItem('trailerBackgroundImageType') || 'trailerBgImage',
+    watchBackgroundImageType: localStorage.getItem('watchBackgroundImageType') || 'watchBgImage',
+    favoriteBackgroundImageType: localStorage.getItem('favoriteBackgroundImageType') || 'favoriBgImage',
+    playedBackgroundImageType: localStorage.getItem('playedBackgroundImageType') || 'playedBgImage',
+    manualListIds: localStorage.getItem('manualListIds') || '',
+    useManualList: localStorage.getItem('useManualList') === 'true',
+    enableSlider: localStorage.getItem('enableSlider') !== 'false',
+    useRandomContent: localStorage.getItem('useRandomContent') !== 'false',
+    fullscreenMode: localStorage.getItem('fullscreenMode') === 'true' ? true : false,
+    listLimit: 20,
+    version: "v2.8.0",
+    historySize: 20,
+    updateInterval: 300000,
+    nextTracksSource: localStorage.getItem('nextTracksSource') || 'playlist',
+    defaultLanguage,
+    languageLabels: getLanguageLabels(defaultLanguage),
+    sliderDuration: parseInt(localStorage.getItem('sliderDuration'), 10) || 15000,
+    artistLimit: parseInt(localStorage.getItem('artistLimit'), 10) || 10,
+    gecikmeSure: parseInt(localStorage.getItem('gecikmeSure'), 10) || 500,
+    limit: parseInt(localStorage.getItem('limit'), 10) || 15,
+    onlyUnwatchedRandom: localStorage.getItem('onlyUnwatchedRandom') === 'true',
+    maxShufflingLimit: parseInt(localStorage.getItem('maxShufflingLimit'), 10) || 10000,
+    excludeEpisodesFromPlaying: localStorage.getItem('excludeEpisodesFromPlaying') !== 'false',
+    showPlaybackProgress: localStorage.getItem('showPlaybackProgress') !== 'false',
+    muziklimit: parseInt(localStorage.getItem('muziklimit'), 10) || 30,
+    albumlimit: parseInt(localStorage.getItem('albumlimit'), 10) || 20,
+    sarkilimit: parseInt(localStorage.getItem('sarkilimit'), 10) || 200,
+    gruplimit: parseInt(localStorage.getItem('gruplimit'), 10) || 100,
+    id3limit: parseInt(localStorage.getItem('id3limit'), 10) || 5,
+    historylimit: parseInt(localStorage.getItem('historylimit'), 10) || 10,
+    playerTheme: localStorage.getItem('playerTheme') || 'dark',
+    playerStyle: localStorage.getItem('playerStyle') || 'player',
+    dateLocale: localStorage.getItem('dateLocale') || 'tr-TR',
+    maxExcludeIdsForUri: parseInt(localStorage.getItem('maxExcludeIdsForUri'), 10) || 100,
+    nextTrack: parseInt(localStorage.getItem('nextTrack'), 10) || 100,
+    topTrack: parseInt(localStorage.getItem('topTrack'), 10) || 30,
+    aktifSure: parseInt(localStorage.getItem('aktifSure'), 10) || 5000,
+    girisSure: parseInt(localStorage.getItem('girisSure'), 10) || 1000,
+    homeSectionsTop: parseInt(localStorage.getItem('homeSectionsTop'), 10) || 0,
+    dotPosterMode: localStorage.getItem('dotPosterMode') === 'true',
+    shuffleSeedLimit: parseInt(localStorage.getItem('shuffleSeedLimit'), 10) || 1000,
+    createAvatar: localStorage.getItem('createAvatar') === 'true',
+    avatarWidth: parseInt(localStorage.getItem('avatarWidth'), 10) || 18,
+    avatarHeight: parseInt(localStorage.getItem('avatarHeight'), 10) || 18,
+    avatarFontSize: parseInt(localStorage.getItem('avatarFontSize'), 10) || 15,
+    avatarTextShadow: localStorage.getItem('avatarTextShadow') || '1px 1px 2px rgba(0,0,0,0.3)',
+    avatarColorMethod: localStorage.getItem('avatarColorMethod') || 'dynamic',
+    avatarSolidColor: localStorage.getItem('avatarSolidColor') || '#FF4081',
+    avatarGradient: localStorage.getItem('avatarGradient') || 'linear-gradient(135deg, #FF9A9E 0%, #FAD0C4 100%)',
+    avatarFontFamily: localStorage.getItem('avatarFontFamily') || 'Righteous',
+    avatarStyle: localStorage.getItem('avatarStyle') || 'dicebear',
+    dicebearStyle: localStorage.getItem('dicebearStyle') || 'adventurer',
+    dicebearBackgroundColor: localStorage.getItem('dicebearBackgroundColor') || 'transparent',
+    dicebearRadius: parseInt(localStorage.getItem('dicebearRadius'), 10) || 50,
+    avatarCacheDuration: parseInt(localStorage.getItem('avatarCacheDuration'), 10) || 10000,
+    avatarScale: parseFloat(localStorage.getItem('avatarScale')) || 4,
+    dicebearBackgroundEnabled: localStorage.getItem('dicebearBackgroundEnabled') === 'true' ? true : false,
+    dicebearPosition: localStorage.getItem('dicebearPosition') !== 'false',
+    autoRefreshAvatar: localStorage.getItem('autoRefreshAvatar') !== 'false',
+    avatarRefreshTime: parseInt(localStorage.getItem('avatarRefreshTime'), 10) || 10,
+    randomDicebearAvatar: localStorage.getItem('randomDicebearAvatar') !== 'false',
+    previewModal: localStorage.getItem('previewModal') !== 'false',
+    allPreviewModal: localStorage.getItem('allPreviewModal') !== 'false',
+    globalPreviewMode: localStorage.getItem('globalPreviewMode') || 'modal',
+    dotPreviewPlaybackMode: readDotPreviewMode(),
+    preferTrailersInPreviewModal: localStorage.getItem('preferTrailersInPreviewModal') !== 'false',
+    onlyTrailerInPreviewModal: localStorage.getItem('onlyTrailerInPreviewModal') === 'true' ? true : false,
+    enabledGmmp: localStorage.getItem('enabledGmmp') !== 'false',
+    enableQualityBadges: localStorage.getItem('enableQualityBadges') !== 'false',
+    enableTrailerThenVideo,
+    disableAllPlayback,
+    dicebearParams: (() => {
+  try {
+    const raw = localStorage.getItem('dicebearParams');
+    if (raw === '[object Object]') {
+      localStorage.removeItem('dicebearParams');
+      return {};
+    }
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.error('Dicebear params parse error:', e);
+    return {};
+  }
+})(),
+
+    enableNotifications: localStorage.getItem('enableNotifications') !== 'false',
+    enableToastNew: localStorage.getItem('enableToastNew') !== 'false',
+    enableToastSystem: localStorage.getItem('enableToastSystem') !== 'false',
+    maxNotifications: parseInt(localStorage.getItem("maxNotifications"), 10) || 15,
+    toastDuration: parseInt(localStorage.getItem("toastDuration"), 10) || 4000,
+    renderResume: parseInt(localStorage.getItem("renderResume"), 10) || 10,
+    enableRenderResume: localStorage.getItem('enableRenderResume') !== 'false',
+    toastGroupThreshold: parseInt(localStorage.getItem("toastGroupThreshold"), 10) || 5,
+    enableCounterSystem: localStorage.getItem('enableCounterSystem') !== 'false',
+
+    enableHomeSectionsMaster: (localStorage.getItem('enableHomeSectionsMaster') || 'true') !== 'false',
+    enablePauseFeaturesMaster: (localStorage.getItem('enablePauseFeaturesMaster') || 'true') !== 'false',
+    enableSubtitleCustomizerModule: (localStorage.getItem('enableSubtitleCustomizerModule') || 'true') !== 'false',
+    enableParentalPinModule: (localStorage.getItem('enableParentalPinModule') || 'true') !== 'false',
+    enableDetailsModalModule: (localStorage.getItem('enableDetailsModalModule') || 'true') !== 'false',
+    enableCastModule: (localStorage.getItem('enableCastModule') || 'true') !== 'false',
+    allowSharedCastViewerForUsers: localStorage.getItem('allowSharedCastViewerForUsers') === 'true',
+    detailsModalTmdbReviewsEnabled: (localStorage.getItem('detailsModalTmdbReviewsEnabled') || 'true') !== 'false',
+    detailsModalLocalCommentsEnabled: localStorage.getItem('detailsModalLocalCommentsEnabled') === 'true',
+    enableCustomSplashScreen: (localStorage.getItem('enableCustomSplashScreen') || 'true') !== 'false',
+    customSplashTitle: (localStorage.getItem('customSplashTitle') || '').trim(),
+
+    enableDirectorRows: localStorage.getItem('enableDirectorRows') !== 'false',
+    showDirectorRowsHeroCards: localStorage.getItem('showDirectorRowsHeroCards') !== 'false',
+    directorRowsCount: parseInt(localStorage.getItem("directorRowsCount"), 10) || 4,
+    directorRowsMinItemsPerDirector: parseInt(localStorage.getItem("directorRowsMinItemsPerDirector"), 10) || 8,
+    directorRowCardCount: parseInt(localStorage.getItem("directorRowCardCount"), 10) || 10,
+    placeDirectorRowsAtBottom: localStorage.getItem('placeDirectorRowsAtBottom') !== 'false',
+    directorRowsUseTopGenres: localStorage.getItem('directorRowsUseTopGenres') !== 'false',
+
+    enableCollectionIndexerAutoStart: localStorage.getItem('enableCollectionIndexerAutoStart') !== 'false',
+    collectionIndexerAutoStartDelayMs: parseInt(localStorage.getItem('collectionIndexerAutoStartDelayMs'), 10) || 75_000,
+
+    enableRecentRows: (localStorage.getItem('enableRecentRows') || 'true') !== 'false',
+    showRecentRowsHeroCards: (localStorage.getItem('showRecentRowsHeroCards') || 'true') !== 'false',
+    showRecentMoviesHeroCards: (localStorage.getItem('showRecentMoviesHeroCards') || 'true') !== 'false',
+    showRecentSeriesHeroCards: (localStorage.getItem('showRecentSeriesHeroCards') || 'true') !== 'false',
+    showRecentMusicHeroCards: (localStorage.getItem('showRecentMusicHeroCards') || 'true') !== 'false',
+    showRecentTracksHeroCards: (localStorage.getItem('showRecentTracksHeroCards') || 'true') !== 'false',
+    showRecentEpisodesHeroCards: (localStorage.getItem('showRecentEpisodesHeroCards') || 'true') !== 'false',
+    showNextUpHeroCards: (localStorage.getItem('showNextUpHeroCards') || 'true') !== 'false',
+    enableTop10MoviesRow: (localStorage.getItem('enableTop10MoviesRow') || 'true') !== 'false',
+    enableTop10SeriesRow: (localStorage.getItem('enableTop10SeriesRow') || 'true') !== 'false',
+    enableTmdbTopMoviesRow: localStorage.getItem('enableTmdbTopMoviesRow') === 'true',
+
+    enableContinueMovies: (localStorage.getItem('enableContinueMovies') || 'true') !== 'false',
+    showContinueMoviesHeroCards: (localStorage.getItem('showContinueMoviesHeroCards') || 'true') !== 'false',
+    continueMoviesCardCount: parseInt(localStorage.getItem('continueMoviesCardCount'), 10) || 10,
+
+    enableContinueSeries: (localStorage.getItem('enableContinueSeries') || 'true') !== 'false',
+    showContinueSeriesHeroCards: (localStorage.getItem('showContinueSeriesHeroCards') || 'true') !== 'false',
+    continueSeriesCardCount: parseInt(localStorage.getItem('continueSeriesCardCount'), 10) || 10,
+
+    enableOtherLibRows: localStorage.getItem('enableOtherLibRows') === 'true',
+    showOtherLibrariesHeroCards: (localStorage.getItem('showOtherLibrariesHeroCards') || 'true') !== 'false',
+    otherLibrariesRecentCardCount: parseInt(localStorage.getItem('otherLibrariesRecentCardCount'), 10) || 10,
+    otherLibrariesContinueCardCount: parseInt(localStorage.getItem('otherLibrariesContinueCardCount'), 10) || 10,
+    otherLibrariesEpisodesCardCount: parseInt(localStorage.getItem('otherLibrariesEpisodesCardCount'), 10) || 10,
+    otherLibrariesIds: (() => {
+      try {
+        const raw = localStorage.getItem('otherLibrariesIds');
+        if (!raw || raw === '[object Object]') return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr.map(x=>String(x||'').trim()).filter(Boolean) : [];
+      } catch { return []; }
+    })(),
+
+    enableRecentMoviesRow: (localStorage.getItem('enableRecentMoviesRow') || 'true') !== 'false',
+    recentMoviesCardCount: parseInt(localStorage.getItem('recentMoviesCardCount'), 10) || 10,
+
+    enableRecentSeriesRow: (localStorage.getItem('enableRecentSeriesRow') || 'true') !== 'false',
+    recentSeriesCardCount: parseInt(localStorage.getItem('recentSeriesCardCount'), 10) || 10,
+
+    enableRecentMusicRow: (localStorage.getItem('enableRecentMusicRow') || 'true') !== 'false',
+    enableRecentMusicTracksRow: (localStorage.getItem('enableRecentMusicTracksRow') || 'true') !== 'false',
+    recentMusicCardCount: parseInt(localStorage.getItem('recentMusicCardCount'), 10) || 10,
+
+    enableRecentEpisodesRow: (localStorage.getItem('enableRecentEpisodesRow') || 'true') !== 'false',
+    recentEpisodesCardCount: parseInt(localStorage.getItem('recentEpisodesCardCount'), 10) || 10,
+    enableNextUpRow: (localStorage.getItem('enableNextUpRow') || 'true') !== 'false',
+    nextUpCardCount: parseInt(localStorage.getItem('nextUpCardCount'), 10) || 10,
+
+    recentRowsSplitTvLibs: (localStorage.getItem('recentRowsSplitTvLibs') || 'true') !== 'false',
+    recentRowsSplitMovieLibs: localStorage.getItem('recentRowsSplitMovieLibs') === 'true',
+
+    recentMoviesLibIds: (() => {
+      try {
+        const raw = localStorage.getItem('recentMoviesLibIds');
+        if (!raw || raw === '[object Object]') return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr.map(x=>String(x||'').trim()).filter(Boolean) : [];
+      } catch { return []; }
+    })(),
+
+    recentSeriesTvLibIds: (() => {
+      try {
+        const raw = localStorage.getItem('recentSeriesTvLibIds');
+        if (!raw || raw === '[object Object]') return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr.map(x=>String(x||'').trim()).filter(Boolean) : [];
+      } catch { return []; }
+    })(),
+    recentEpisodesTvLibIds: (() => {
+      try {
+        const raw = localStorage.getItem('recentEpisodesTvLibIds');
+        if (!raw || raw === '[object Object]') return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr.map(x=>String(x||'').trim()).filter(Boolean) : [];
+      } catch { return []; }
+    })(),
+    continueSeriesTvLibIds: (() => {
+      try {
+        const raw = localStorage.getItem('continueSeriesTvLibIds');
+        if (!raw || raw === '[object Object]') return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr.map(x=>String(x||'').trim()).filter(Boolean) : [];
+      } catch { return []; }
+    })(),
+
+    enableBecauseYouWatched: (localStorage.getItem('enableBecauseYouWatched') || 'true') !== 'false',
+    becauseYouWatchedRowCount: parseInt(localStorage.getItem('becauseYouWatchedRowCount'), 10) || 10,
+    becauseYouWatchedCardCount: parseInt(localStorage.getItem('becauseYouWatchedCardCount'), 10) || 10,
+
+    enableProfileChooser: localStorage.getItem('enableProfileChooser') !== 'false',
+    profileChooserAutoOpen: localStorage.getItem('profileChooserAutoOpen') !== 'false',
+    profileChooserAutoOpenRequireQuickLogin: localStorage.getItem('profileChooserAutoOpenRequireQuickLogin') !== 'false',
+    profileChooserRememberTokens: localStorage.getItem('profileChooserRememberTokens') !== 'false',
+
+    enablePersonalRecommendations: localStorage.getItem('enablePersonalRecommendations') !== 'false',
+    showPersonalRecsHeroCards: localStorage.getItem('showPersonalRecsHeroCards') !== 'false',
+    managedCardTitleDisplayMode: normalizeManagedCardTitleDisplayMode(
+      localStorage.getItem('managedCardTitleDisplayMode')
+    ),
+    personalRecsCacheTtlMs: parseInt(localStorage.getItem('personalRecsCacheTtlMs'), 10) || 3600000,
+    enableStudioHubs: localStorage.getItem('enableStudioHubs') !== 'false',
+    studioHubsColorize: localStorage.getItem('studioHubsColorize') === 'true',
+    studioHubsAutoAddFromWatchlistCopy: localStorage.getItem('studioHubsAutoAddFromWatchlistCopy') === 'true',
+    placeGenreHubsAbovePersonalRecs: localStorage.getItem('placeGenreHubsAbovePersonalRecs') === 'true' ? true : false,
+    studioHubsHoverVideo: localStorage.getItem('studioHubsHoverVideo') !== 'false',
+    studioMiniTrailerPopover: (localStorage.getItem("studioMiniTrailerPopover") || "false") === "true",
+    studioHubsMinRating: parseFloat(localStorage.getItem('studioHubsMinRating')) || 6.5,
+    studioHubsCardCount: parseInt(localStorage.getItem('studioHubsCardCount'), 10) || 10,
+    personalRecsCardCount: parseInt(localStorage.getItem('personalRecsCardCount'), 10) || 9,
+    studioHubsOrder: (() => {
+      try {
+       const raw = localStorage.getItem('studioHubsOrder');
+        if (raw && raw !== '[object Object]') {
+          const arr = JSON.parse(raw);
+         if (Array.isArray(arr) && arr.length) return arr;
+        }
+     } catch {}
+     return [
+        "Marvel Studios","Pixar","Walt Disney Pictures","Disney+","DC",
+        "Warner Bros. Pictures","Lucasfilm Ltd.","Columbia Pictures","Paramount Pictures","Netflix"
+      ];
+    })(),
+    studioHubsHidden: (() => {
+      try {
+        const raw = localStorage.getItem('studioHubsHidden');
+        if (!raw || raw === '[object Object]') return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr)
+          ? arr.map(x => String(x || '').trim()).filter(Boolean)
+          : [];
+      } catch {
+        return [];
+      }
+    })(),
+    managedHomeSectionOrder: (() => {
+      try {
+        const raw = localStorage.getItem('managedHomeSectionOrder');
+        if (raw && raw !== '[object Object]') {
+          return normalizeManagedHomeSectionOrder(raw);
+        }
+      } catch {}
+      return normalizeManagedHomeSectionOrder();
+    })(),
+
+    slideTop: parseInt(localStorage.getItem('slideTop'), 10) || 0,
+    slideLeft: parseInt(localStorage.getItem('slideLeft'), 10) || 0,
+    slideWidth: parseInt(localStorage.getItem('slideWidth'), 10) || 0,
+    slideHeight: parseInt(localStorage.getItem('slideHeight'), 10) || 0,
+
+    logoContainerTop: parseInt(localStorage.getItem('logoContainerTop'), 10) || 0,
+    logoContainerLeft: parseInt(localStorage.getItem('logoContainerLeft'), 10) || 0,
+    logoContainerWidth: parseInt(localStorage.getItem('logoContainerWidth'), 10) || 0,
+    logoContainerHeight: parseInt(localStorage.getItem('logoContainerHeight'), 10) || 0,
+    logoContainerDisplay: localStorage.getItem('logoContainerDisplay') || '',
+    logoContainerFlexDirection: localStorage.getItem('logoContainerFlexDirection') || '',
+    logoContainerJustifyContent: localStorage.getItem('logoContainerJustifyContent') || '',
+    logoContainerAlignItems: localStorage.getItem('logoContainerAlignItems') || '',
+    logoContainerFlexWrap: localStorage.getItem('logoContainerFlexWrap') || '',
+
+    buttonContainerTop: parseInt(localStorage.getItem('buttonContainerTop'), 10) || 0,
+    buttonContainerLeft: parseInt(localStorage.getItem('buttonContainerLeft'), 10) || 0,
+    buttonContainerWidth: parseInt(localStorage.getItem('buttonContainerWidth'), 10) || 0,
+    buttonContainerHeight: parseInt(localStorage.getItem('buttonContainerHeight'), 10) || 0,
+    buttonContainerDisplay: localStorage.getItem('buttonContainerDisplay') || '',
+    buttonContainerFlexDirection: localStorage.getItem('buttonContainerFlexDirection') || '',
+    buttonContainerJustifyContent: localStorage.getItem('buttonContainerJustifyContent') || '',
+    buttonContainerAlignItems: localStorage.getItem('buttonContainerAlignItems') || '',
+    buttonContainerFlexWrap: localStorage.getItem('buttonContainerFlexWrap') || '',
+
+    metaContainerTop: parseInt(localStorage.getItem('metaContainerTop'), 10) || 0,
+    metaContainerLeft: parseInt(localStorage.getItem('metaContainerLeft'), 10) || 0,
+    metaContainerWidth: parseInt(localStorage.getItem('metaContainerWidth'), 10) || 0,
+    metaContainerHeight: parseInt(localStorage.getItem('metaContainerHeight'), 10) || 0,
+    metaContainerDisplay: localStorage.getItem('metaContainerDisplay') || '',
+    metaContainerFlexDirection: localStorage.getItem('metaContainerFlexDirection') || '',
+    metaContainerJustifyContent: localStorage.getItem('metaContainerJustifyContent') || '',
+    metaContainerAlignItems: localStorage.getItem('metaContainerAlignItems') || '',
+    metaContainerFlexWrap: localStorage.getItem('metaContainerFlexWrap') || '',
+
+    plotContainerTop: parseInt(localStorage.getItem('plotContainerTop'), 10) || 0,
+    plotContainerLeft: parseInt(localStorage.getItem('plotContainerLeft'), 10) || 0,
+    plotContainerWidth: parseInt(localStorage.getItem('plotContainerWidth'), 10) || 0,
+    plotContainerHeight: parseInt(localStorage.getItem('plotContainerHeight'), 10) || 0,
+    plotContainerDisplay: localStorage.getItem('plotContainerDisplay') || '',
+    plotContainerFlexDirection: localStorage.getItem('plotContainerFlexDirection') || '',
+    plotContainerJustifyContent: localStorage.getItem('plotContainerJustifyContent') || '',
+    plotContainerAlignItems: localStorage.getItem('plotContainerAlignItems') || '',
+    plotContainerFlexWrap: localStorage.getItem('plotContainerFlexWrap') || '',
+
+    titleContainerTop: parseInt(localStorage.getItem('titleContainerTop'), 10) || 0,
+    titleContainerLeft: parseInt(localStorage.getItem('titleContainerLeft'), 10) || 0,
+    titleContainerWidth: parseInt(localStorage.getItem('titleContainerWidth'), 10) || 0,
+    titleContainerHeight: parseInt(localStorage.getItem('titleContainerHeight'), 10) || 0,
+    titleContainerDisplay: localStorage.getItem('titleContainerDisplay') || '',
+    titleContainerFlexDirection: localStorage.getItem('titleContainerFlexDirection') || '',
+    titleContainerJustifyContent: localStorage.getItem('titleContainerJustifyContent') || '',
+    titleContainerAlignItems: localStorage.getItem('titleContainerAlignItems') || '',
+    titleContainerFlexWrap: localStorage.getItem('titleContainerFlexWrap') || '',
+
+    directorContainerTop: parseInt(localStorage.getItem('directorContainerTop'), 10) || 0,
+    directorContainerLeft: parseInt(localStorage.getItem('directorContainerLeft'), 10) || 0,
+    directorContainerWidth: parseInt(localStorage.getItem('directorContainerWidth'), 10) || 0,
+    directorContainerHeight: parseInt(localStorage.getItem('directorContainerHeight'), 10) || 0,
+    directorContainerDisplay: localStorage.getItem('directorContainerDisplay') || '',
+    directorContainerFlexDirection: localStorage.getItem('directorContainerFlexDirection') || '',
+    directorContainerJustifyContent: localStorage.getItem('directorContainerJustifyContent') || '',
+    directorContainerAlignItems: localStorage.getItem('directorContainerAlignItems') || '',
+    directorContainerFlexWrap: localStorage.getItem('directorContainerFlexWrap') || '',
+
+    infoContainerTop: parseInt(localStorage.getItem('infoContainerTop'), 10) || 0,
+    infoContainerLeft: parseInt(localStorage.getItem('infoContainerLeft'), 10) || 0,
+    infoContainerWidth: parseInt(localStorage.getItem('infoContainerWidth'), 10) || 0,
+    infoContainerHeight: parseInt(localStorage.getItem('infoContainerHeight'), 10) || 0,
+    infoContainerDisplay: localStorage.getItem('infoContainerDisplay') || '',
+    infoContainerFlexDirection: localStorage.getItem('infoContainerFlexDirection') || '',
+    infoContainerJustifyContent: localStorage.getItem('infoContainerJustifyContent') || '',
+    infoContainerAlignItems: localStorage.getItem('infoContainerAlignItems') || '',
+    infoContainerFlexWrap: localStorage.getItem('infoContainerFlexWrap') || '',
+
+    mainContainerTop: parseInt(localStorage.getItem('mainContainerTop'), 10) || 0,
+    mainContainerLeft: parseInt(localStorage.getItem('mainContainerLeft'), 10) || 0,
+    mainContainerWidth: parseInt(localStorage.getItem('mainContainerWidth'), 10) || 0,
+    mainContainerHeight: parseInt(localStorage.getItem('mainContainerHeight'), 10) || 0,
+    mainContainerDisplay: localStorage.getItem('mainContainerDisplay') || '',
+    mainContainerFlexDirection: localStorage.getItem('mainContainerFlexDirection') || '',
+    mainContainerJustifyContent: localStorage.getItem('mainContainerJustifyContent') || '',
+    mainContainerAlignItems: localStorage.getItem('mainContainerAlignItems') || '',
+    mainContainerFlexWrap: localStorage.getItem('mainContainerFlexWrap') || '',
+
+    sliderContainerTop: parseInt(localStorage.getItem('sliderContainerTop'), 10) || 0,
+    sliderContainerLeft: parseInt(localStorage.getItem('sliderContainerLeft'), 10) || 0,
+    sliderContainerWidth: parseInt(localStorage.getItem('sliderContainerWidth'), 10) || 0,
+    sliderContainerHeight: parseInt(localStorage.getItem('sliderContainerHeight'), 10) || 0,
+    sliderContainerDisplay: localStorage.getItem('sliderContainerDisplay') || '',
+    sliderContainerFlexDirection: localStorage.getItem('sliderContainerFlexDirection') || '',
+    sliderContainerJustifyContent: localStorage.getItem('sliderContainerJustifyContent') || '',
+    sliderContainerAlignItems: localStorage.getItem('sliderContainerAlignItems') || '',
+    sliderContainerFlexWrap: localStorage.getItem('sliderContainerFlexWrap') || '',
+
+    existingDotContainerTop: parseInt(localStorage.getItem('existingDotContainerTop'), 10) || 0,
+    existingDotContainerLeft: parseInt(localStorage.getItem('existingDotContainerLeft'), 10) || 0,
+    existingDotContainerWidth: parseInt(localStorage.getItem('existingDotContainerWidth'), 10) || 0,
+    existingDotContainerHeight: parseInt(localStorage.getItem('existingDotContainerHeight'), 10) || 0,
+    existingDotContainerDisplay: localStorage.getItem('existingDotContainerDisplay') || '',
+    existingDotContainerFlexDirection: localStorage.getItem('existingDotContainerFlexDirection') || '',
+    existingDotContainerJustifyContent: localStorage.getItem('existingDotContainerJustifyContent') || '',
+    existingDotContainerAlignItems: localStorage.getItem('existingDotContainerAlignItems') || '',
+    dotContainerFlexWrap: localStorage.getItem('existingDotContainerFlexWrap') || '',
+
+    progressBarTop: parseInt(localStorage.getItem('progressBarTop'), 10) || 0,
+    progressBarLeft: parseInt(localStorage.getItem('progressBarLeft'), 10) || 0,
+    progressBarWidth: parseInt(localStorage.getItem('progressBarWidth'), 10) || 100,
+    progressBarHeight: parseInt(localStorage.getItem('progressBarHeight'), 10) || 0,
+
+    progressSecondsTop:  parseFloat(localStorage.getItem('progressSecondsTop'))  || '',
+    progressSecondsLeft: parseFloat(localStorage.getItem('progressSecondsLeft')) || '',
+
+    providerContainerTop: parseInt(localStorage.getItem('providerContainerTop'), 10) || 0,
+    providerContainerLeft: parseInt(localStorage.getItem('providerContainerLeft'), 10) || 0,
+    providerContainerWidth: parseInt(localStorage.getItem('providerContainerWidth'), 10) || 0,
+    providerContainerHeight: parseInt(localStorage.getItem('providerContainerHeight'), 10) || 0,
+    providerContainerDisplay: localStorage.getItem('providerContainerDisplay') || '',
+    providerContainerFlexDirection: localStorage.getItem('providerContainerFlexDirection') || '',
+    providerContainerJustifyContent: localStorage.getItem('providerContainerJustifyContent') || '',
+    providerContainerAlignItems: localStorage.getItem('providerContainerAlignItems') || '',
+    providerContainerFlexWrap: localStorage.getItem('providerContainerFlexWrap') || '',
+
+    providericonsContainerTop: parseInt(localStorage.getItem('providericonsContainerTop'), 10) || 0,
+    providericonsContainerLeft: parseInt(localStorage.getItem('providericonsContainerLeft'), 10) || 0,
+    providericonsContainerWidth: parseInt(localStorage.getItem('providericonsContainerWidth'), 10) || 0,
+    providericonsContainerHeight: parseInt(localStorage.getItem('providericonsContainerHeight'), 10) || 0,
+    providericonsContainerDisplay: localStorage.getItem('providericonsContainerDisplay') || '',
+    providericonsContainerFlexDirection: localStorage.getItem('providericonsContainerFlexDirection') || '',
+    providericonsContainerJustifyContent: localStorage.getItem('providericonsContainerJustifyContent') || '',
+    providericonsContainerAlignItems: localStorage.getItem('providericonsContainerAlignItems') || '',
+    providericonsContainerFlexWrap: localStorage.getItem('providericonsContainerFlexWrap') || '',
+
+    statusContainerTop: parseInt(localStorage.getItem('statusContainerTop'), 10) || 0,
+    statusContainerLeft: parseInt(localStorage.getItem('statusContainerLeft'), 10) || 0,
+    statusContainerWidth: parseInt(localStorage.getItem('statusContainerWidth'), 10) || 0,
+    statusContainerHeight: parseInt(localStorage.getItem('statusContainerHeight'), 10) || 0,
+    statusContainerDisplay: localStorage.getItem('statusContainerDisplay') || '',
+    statusContainerFlexDirection: localStorage.getItem('statusContainerFlexDirection') || '',
+    statusContainerJustifyContent: localStorage.getItem('statusContainerJustifyContent') || '',
+    statusContainerAlignItems: localStorage.getItem('statusContainerAlignItems') || '',
+    statusContainerFlexWrap: localStorage.getItem('statusContainerFlexWrap') || '',
+
+    ratingContainerTop: parseInt(localStorage.getItem('ratingContainerTop'), 10) || 0,
+    ratingContainerLeft: parseInt(localStorage.getItem('ratingContainerLeft'), 10) || 0,
+    ratingContainerWidth: parseInt(localStorage.getItem('ratingContainerWidth'), 10) || 0,
+    ratingContainerHeight: parseInt(localStorage.getItem('ratingContainerHeight'), 10) || 0,
+    ratingContainerDisplay: localStorage.getItem('ratingContainerDisplay') || '',
+    ratingContainerFlexDirection: localStorage.getItem('ratingContainerFlexDirection') || '',
+    ratingContainerJustifyContent: localStorage.getItem('ratingContainerJustifyContent') || '',
+    ratingContainerAlignItems: localStorage.getItem('ratingContainerAlignItems') || '',
+    ratingContainerFlexWrap: localStorage.getItem('ratingContainerFlexWrap') || '',
+
+    pauseOverlay: readPauseOverlay(),
+    smartAutoPause: readSmartAutoPause(),
+
+    slideTransitionType: localStorage.getItem('slideTransitionType') || 'flip',
+    dotPosterTransitionType: localStorage.getItem('dotPosterTransitionType') || 'scale',
+    enableSlideAnimations: localStorage.getItem('enableSlideAnimations') === 'true' ? true : false,
+    enableDotPosterAnimations: localStorage.getItem('enableDotPosterAnimations') === 'true' ? true : false,
+    slideAnimationDuration: parseInt(localStorage.getItem('slideAnimationDuration'), 10) || 800,
+    dotPosterAnimationDuration: parseInt(localStorage.getItem('dotPosterAnimationDuration'), 10) || 500,
+
+    notificationsEnabled: localStorage.getItem('notificationsEnabled') !== 'false',
+    useAlbumArtAsBackground: localStorage.getItem('useAlbumArtAsBackground') === 'true',
+    buttonBackgroundBlur: (() => {
+      const v = localStorage.getItem('buttonBackgroundBlur');
+      return v !== null ? parseInt(v, 10) : 5;
+    })(),
+    buttonBackgroundOpacity: (() => {
+    const v = localStorage.getItem('buttonBackgroundOpacity');
+    return v !== null ? parseFloat(v) : 0.5;
+})(),
+    albumArtBackgroundBlur: (() => {
+      const v = localStorage.getItem('albumArtBackgroundBlur');
+      return v !== null ? parseInt(v, 10) : 5;
+    })(),
+    albumArtBackgroundOpacity: (() => {
+      const v = localStorage.getItem('albumArtBackgroundOpacity');
+      return v !== null ? parseFloat(v) : 0.5;
+    })(),
+    dotBackgroundBlur: (() => {
+      const v = localStorage.getItem('dotBackgroundBlur');
+      return v !== null ? parseInt(v, 10) : 5;
+    })(),
+    dotBackgroundOpacity: (() => {
+    const v = localStorage.getItem('dotBackgroundOpacity');
+    return v !== null ? parseFloat(v) : 0.5;
+})(),
+      playingLimit: (() => {
+      const v = localStorage.getItem('playingLimit');
+      return v !== null ? parseInt(v, 10) : 0;
+    })(),
+    allowedWriters: (() => {
+      const defaultWriters = [
+        "quentin tarantino",
+        "nuri bilge ceylan",
+        "zeki demirkubuz",
+        "yavuz turgul",
+        "stephen king",
+        "martin scorsese",
+        "j.r.r. tolkien",
+        "andrew kevin walker",
+        "christopher nolan",
+        "cem yılmaz",
+        "thomas harris"
+      ];
+      let storedWriters = [];
+      try {
+        const stored = localStorage.getItem('allowedWriters');
+        storedWriters = stored ? JSON.parse(stored) : [];
+      } catch (e) {
+        storedWriters = [];
+      }
+      return [...new Set([...defaultWriters, ...storedWriters])];
+    })(),
+    minHighQualityWidth: parseInt(localStorage.getItem("minHighQualityWidth"), 10) || 1920,
+    backdropMaxWidth: parseInt(localStorage.getItem("backdropMaxWidth"), 10) || 1920,
+    minPixelCount: parseInt(localStorage.getItem("minPixelCount"), 10) || (1920 * 1080),
+    cssVariant: localStorage.getItem('cssVariant') || 'normalslider',
+    peakSlider: readPeakSlider(),
+    peakDiagonal: (() => {
+      const v = localStorage.getItem('peakDiagonal');
+      if (v === 'true' || v === 'false') return v === 'true';
+      return readPeakSlider();
+    })(),
+    peakSpanLeft:  parseInt(localStorage.getItem('peakSpanLeft'), 10)  || 3,
+    peakSpanRight: parseInt(localStorage.getItem('peakSpanRight'), 10) || 3,
+    peakGapLeft: parseInt(localStorage.getItem('peakGapLeft'), 10) || 80,
+    peakGapRight: parseInt(localStorage.getItem('peakGapRight'), 10) || 80,
+    peakGapY: parseInt(localStorage.getItem('peakGapY'), 10) || 0,
+    enableImageSizeFilter: localStorage.getItem("enableImageSizeFilter") === "true",
+    minImageSizeKB: parseInt(localStorage.getItem("minImageSizeKB"), 10) || 800,
+    maxImageSizeKB: parseInt(localStorage.getItem("maxImageSizeKB"), 10) || 1500,
+
+    enableGenreHubs: localStorage.getItem('enableGenreHubs') !== 'false',
+    showGenreHubsHeroCards: (localStorage.getItem('showGenreHubsHeroCards') || 'true') !== 'false',
+    studioHubsGenreCardCount: parseInt(localStorage.getItem("studioHubsGenreCardCount"), 10) || 10,
+    studioHubsGenreRowsCount: parseInt(localStorage.getItem("studioHubsGenreRowsCount"), 10) || 4,
+    genreHubsOrder: (() => {
+      try {
+        const raw = localStorage.getItem('genreHubsOrder');
+        if (raw && raw !== '[object Object]') {
+          const arr = JSON.parse(raw);
+          if (Array.isArray(arr) && arr.length) {
+            const blacklist = ['audio','podcast','audiobook','soundtrack','radio','talk','interview','music'];
+            return arr.filter(g => g && !blacklist.includes(String(g).toLowerCase()));
+          }
+        }
+      } catch {}
+      return null;
+    })(),
+
+    currentUserIsAdmin: (() => {
+      try {
+        const pol =
+          window.ApiClient?._currentUser?.Policy ||
+          window.ApiClient?._currentUser?.UserPolicy ||
+          null;
+
+        if (pol) {
+          const liveAdminFlag = [pol.IsAdministrator, pol.IsAdmin, pol.IsAdminUser]
+            .find(value =>
+              value === true ||
+              value === false ||
+              value === 'true' ||
+              value === 'false'
+            );
+
+          if (liveAdminFlag !== undefined) {
+            return liveAdminFlag === true || liveAdminFlag === 'true';
+          }
+        }
+
+        const ls = localStorage.getItem('currentUserIsAdmin');
+        if (ls === 'true' || ls === 'false') return ls === 'true';
+      } catch {}
+      return false;
+    })(),
+    forceGlobalUserSettings: forceGlobal
+  };
+
+  registerManagedStorageKeys([
+    ...Object.keys(resolvedConfig).filter((key) => key !== "settingsHotkey"),
+    "jms:settingsTargetProfile",
+    "settings.allowedTabs.v1",
+    "lyricsMode",
+    "lyricsOverwrite"
+  ]);
+
+  return resolvedConfig;
+}
+
+export function isHomeSectionsMasterEnabled(source = null) {
+  const cfg = source || getConfig();
+  return cfg?.enableHomeSectionsMaster !== false;
+}
+
+export function getHomeSectionsRuntimeConfig(source = null) {
+  const cfg = source || getConfig() || {};
+  const masterEnabled = isHomeSectionsMasterEnabled(cfg);
+  const enabledMap = buildManagedHomeSectionEnabledMap(cfg);
+
+  return {
+    masterEnabled,
+    enableStudioHubs: enabledMap.studioHubs,
+    enablePersonalRecommendations: enabledMap.personalRecommendations,
+    enableTop10SeriesRowsSection: enabledMap.top10SeriesRows,
+    enableTop10MovieRowsSection: enabledMap.top10MovieRows,
+    enableTmdbTopMoviesRowsSection: enabledMap.tmdbTopMoviesRows,
+    enableBecauseYouWatched: enabledMap.becauseYouWatched,
+    enableGenreHubs: enabledMap.genreHubs,
+    enableDirectorRows: enabledMap.directorRows,
+    enableRecentRows: masterEnabled && cfg.enableRecentRows !== false,
+    enableRecentRowsSection: enabledMap.recentRows,
+    enableContinueRowsSection: enabledMap.continueRows,
+    enableNextUpRowsSection: enabledMap.nextUpRows,
+    enableContinueMovies: masterEnabled && cfg.enableContinueMovies !== false,
+    enableContinueSeries: masterEnabled && cfg.enableContinueSeries !== false,
+    enableOtherLibRows: masterEnabled && !!cfg.enableOtherLibRows,
+    managedSectionOrder: normalizeManagedHomeSectionOrder(cfg?.managedHomeSectionOrder)
+      .filter((key) => enabledMap[key]),
+  };
+}
+
+export function isPauseFeaturesMasterEnabled(source = null) {
+  const cfg = source || getConfig();
+  return cfg?.enablePauseFeaturesMaster !== false;
+}
+
+export function getPauseFeaturesRuntimeConfig(source = null) {
+  const cfg = source || getConfig() || {};
+  const masterEnabled = isPauseFeaturesMasterEnabled(cfg);
+  const pauseOverlayCfg = cfg?.pauseOverlay || {};
+  const smartAutoPauseCfg = cfg?.smartAutoPause || {};
+
+  return {
+    masterEnabled,
+    enablePauseOverlay: masterEnabled && pauseOverlayCfg.enabled !== false,
+    enableSmartAutoPause: masterEnabled && smartAutoPauseCfg.enabled !== false,
+    enablePauseAgeBadge: masterEnabled && pauseOverlayCfg.showAgeBadge !== false,
+    enablePauseOsdHeaderRatings: masterEnabled && pauseOverlayCfg.showOsdHeaderRatings !== false
+  };
+}
+
+export function isSubtitleCustomizerModuleEnabled(source = null) {
+  const cfg = source || getConfig();
+  return cfg?.enableSubtitleCustomizerModule !== false;
+}
+
+export function isParentalPinModuleEnabled(source = null) {
+  const cfg = source || getConfig();
+  return cfg?.enableParentalPinModule !== false;
+}
+
+export function isDetailsModalModuleEnabled(source = null) {
+  const cfg = source || getConfig();
+  return cfg?.enableDetailsModalModule !== false;
+}
+
+export function getDetailsModalRuntimeConfig(source = null) {
+  const cfg = source || getConfig() || {};
+  const enabled = isDetailsModalModuleEnabled(cfg);
+
+  return {
+    enabled,
+    showTmdbReviews: enabled && cfg.detailsModalTmdbReviewsEnabled !== false,
+    showLocalComments: enabled && cfg.detailsModalLocalCommentsEnabled === true
+  };
+}
+
+function pruneGlobalConfig(cfg) {
+  const deny = new Set([
+    "languageLabels",
+    "currentUserIsAdmin",
+    "settingsHotkey",
+    "version",
+    "historySize",
+    "updateInterval",
+    "listLimit"
+  ]);
+
+  const out = {};
+  for (const [k, v] of Object.entries(cfg || {})) {
+    if (deny.has(k)) continue;
+    out[k] = v;
+  }
+
+  const storedLanguagePreference = getStoredLanguagePreference();
+  if (storedLanguagePreference !== null && storedLanguagePreference !== undefined) {
+    out.defaultLanguage = storedLanguagePreference;
+  }
+
+  return out;
+}
+
+export async function publishAdminSnapshotIfForced() {
+  try {
+    const cfg = getConfig();
+    if (!cfg?.currentUserIsAdmin) {
+      return { attempted: false, forced: false, ok: true, reason: "not-admin" };
+    }
+
+    const targetProfile = getAdminTargetProfile();
+    const r = await fetch(`/Plugins/TanadosUI/UserSettings?ts=${Date.now()}&profile=${targetProfile}`, {
+      cache: "no-store"
+    });
+    const j = r.ok ? await r.json() : null;
+    if (!j?.forceGlobal) {
+      return { attempted: false, forced: false, ok: true, reason: "not-forced", profile: targetProfile };
+    }
+
+    const globalConfig = pruneGlobalConfig(cfg);
+    const token =
+      window.ApiClient?.accessToken?.() ||
+      window.ApiClient?._accessToken ||
+      "";
+
+    if (!token) {
+      console.warn("[TanadosUI] Auto publish skipped (no token).");
+      return { attempted: true, forced: true, ok: false, reason: "no-token", profile: targetProfile };
+    }
+
+    const pr = await fetch(`/Plugins/TanadosUI/UserSettings/Publish?ts=${Date.now()}&profile=${targetProfile}`, {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Emby-Token": token
+      },
+      body: JSON.stringify({ global: globalConfig, profile: targetProfile })
+    });
+
+    if (!pr.ok) {
+      console.warn("[TanadosUI] Auto publish failed:", pr.status);
+      return { attempted: true, forced: true, ok: false, reason: "http-error", status: pr.status, profile: targetProfile };
+    }
+
+    console.log("[TanadosUI] Auto publish success.");
+    return { attempted: true, forced: true, ok: true, profile: targetProfile };
+  } catch (e) {
+    console.warn("[TanadosUI] Auto publish error:", e);
+    return {
+      attempted: true,
+      forced: true,
+      ok: false,
+      reason: "exception",
+      error: e?.message || String(e)
+    };
+  }
+}
+
+export function getServerAddress() {
+  let raw =
+    (window.serverConfig?.address) ||
+    (sessionStorage.getItem('serverAddress')) ||
+    (localStorage.getItem('serverAddress')) ||
+    '';
+
+  try {
+    if (!raw && window.ApiClient) {
+      if (typeof window.ApiClient.serverAddress === 'function') {
+        raw = window.ApiClient.serverAddress();
+      } else if (typeof window.ApiClient._serverAddress === 'string') {
+        raw = window.ApiClient._serverAddress;
+      } else if (typeof window.ApiClient.serverAddress === 'string') {
+        raw = window.ApiClient.serverAddress;
+      }
+    }
+  } catch {}
+
+  if (!raw) return _trimSlashesEnd(window.location.origin);
+
+  const s = String(raw).trim();
+  if (!s) return _trimSlashesEnd(window.location.origin);
+  if (/^https?:\/\//i.test(s)) return _trimSlashesEnd(s);
+  if (s.startsWith('//')) return _trimSlashesEnd(`${window.location.protocol}${s}`);
+  if (s.startsWith('/')) {
+    return _trimSlashesEnd(`${window.location.origin}${s}`);
+  }
+  return _trimSlashesEnd(`${window.location.protocol}//${s}`);
+ }
+
+export function buildJfUrl(pathOrUrl) {
+  const base = getServerAddress();
+  const p = String(pathOrUrl || '').trim();
+  if (!p) return base;
+  if (/^https?:\/\//i.test(p)) return p;
+  if (p.startsWith('//')) return `${window.location.protocol}${p}`;
+  if (p.startsWith('/')) return `${base}${p}`;
+  return `${base}/${p}`;
+}
+
+(async () => {
+  try {
+    const data = await __fetchGlobalOverride(true);
+    window.__JMS_GLOBAL_OVERRIDE__ = data;
+    maybeBootstrapManagedStorage(pruneGlobalConfig(getConfig()));
+    const managedStorageActive = !!getManagedStorageBridge();
+
+    if (!data?.forceGlobal) {
+      if (!managedStorageActive && _restoreBackupIfAny()) {
+        console.log("[TanadosUI] Restored user settings (global off).");
+      }
+      return;
+    }
+
+    const isAdmin =
+      window.ApiClient?._currentUser?.Policy?.IsAdministrator === true;
+
+    if (isAdmin) {
+      console.log("[TanadosUI] Admin user – skipping forced global apply.");
+      return;
+    }
+
+    if (!data?.global || __globalApplied) return;
+
+    const g = data.global;
+    const keys = Object.keys(g || {});
+    _takeBackupOnce(keys);
+
+    for (const k of keys) {
+      _setLsSmart(k, g[k]);
+    }
+
+    __globalApplied = true;
+    console.log("[TanadosUI] Global user settings applied (forced).");
+  } catch {}
+})();
