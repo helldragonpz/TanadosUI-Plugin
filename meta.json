@@ -10,6 +10,6 @@
   "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin",
   "imagePathLinux": "/var/lib/jellyfin/plugins/Tanados UI_2.8.1.0/icon.png",
   "imagePathWindows": "%ProgramData%/Jellyfin/Server/plugins/Tanados UI_2.8.1.0/icon.png",
-  "timestamp": "2026-05-07T19:12:54Z",
+  "timestamp": "2026-05-07T19:57:24.1935272Z",
   "guid": "c0b4a5e0-2f6a-4e70-9c5f-1e7c2d0b7f12"
 }
