@@ -1,7 +1,7 @@
 <h1 align="center">Jellyfin TanadosUI Plugin</h1>
 
 <p align="center">
-  <img width="180" height="180" alt="Jellyfin TanadosUI Plugin" src="https://github.com/user-attachments/assets/29947627-b2ff-4ecd-8a2b-4df932aca657" />
+  <img width="180" height="180" alt="Jellyfin TanadosUI Plugin" src="https://github.com/helldragonpz/TanadosUI-Plugin/blob/master/img/icon.png" />
 </p>
 
 <p align="center">
