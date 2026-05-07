@@ -13,7 +13,7 @@
         "changelog": "v2.8.1.0\n\nChanges:\n- Added automatic Tanados logo replacement for Jellyfin Web header, splash/login logo, image logos, document title, and favicons\n- Added Tanados branding CSS loaded by the plugin injection block without manual Custom CSS\n- Added Tanados purple/gold accent overrides to reduce the original green/teal styling\n- Added optimized Tanados logo and favicon assets under /slider/src/images\n- Updated visible plugin naming to Tanados UI\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Perform a hard browser refresh (Ctrl + F5) after updating\n- Native Jellyfin apps may not use server-side web branding; this targets Jellyfin Web loaded from your server",
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.8.1.0/TanadosUI-2.8.1.0-server.zip",
-        "checksum": "REPLACE_WITH_SHA256_AFTER_BUILD",
+        "checksum": "sha256:12b7113e0997e729a6a1f4d18060381e1a5b7c8f6a0efe40b712ba16f1e31439",
         "timestamp": "2026-05-07T19:12:54Z"
       }
     ]
