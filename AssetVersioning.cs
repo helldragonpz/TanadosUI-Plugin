@@ -214,13 +214,13 @@ namespace Jellyfin.Plugin.TanadosUI
   }
 
   var captions = {
-    tur: "TanadosUI hazırlanıyor",
-    eng: "TanadosUI is starting",
-    deu: "TanadosUI wird vorbereitet",
-    fre: "TanadosUI se prépare",
-    spa: "TanadosUI se está preparando",
-    rus: "TanadosUI подготавливается",
-    bul: "TanadosUI се подготвя"
+    tur: "Tanados UI hazırlanıyor",
+    eng: "Tanados UI is starting",
+    deu: "Tanados UI wird vorbereitet",
+    fre: "Tanados UI se prépare",
+    spa: "Tanados UI se está preparando",
+    rus: "Tanados UI подготавливается",
+    bul: "Tanados UI се подготвя"
   };
 
   var splashLocale = {
@@ -479,7 +479,7 @@ namespace Jellyfin.Plugin.TanadosUI
     }
   }
 
-  var defaultTitle = "TanadosUI";
+  var defaultTitle = "Tanados UI";
   var customTitle = defaultTitle;
   try {
     var rawCustomTitle = window.localStorage ? localStorage.getItem("customSplashTitle") : null;
@@ -490,7 +490,7 @@ namespace Jellyfin.Plugin.TanadosUI
 
   var resolvedLang = resolveLangKey(lang);
   var localeCopy = splashLocale[resolvedLang] || splashLocale.eng;
-  var captionTemplate = captions[resolvedLang] || captions.eng || "TanadosUI is starting";
+  var captionTemplate = captions[resolvedLang] || captions.eng || "Tanados UI is starting";
   var caption = captionTemplate.indexOf(defaultTitle) !== -1
     ? captionTemplate.replace(defaultTitle, customTitle)
     : captionTemplate;
@@ -502,6 +502,7 @@ namespace Jellyfin.Plugin.TanadosUI
   root.setAttribute(CAPTION_ATTR, caption);
   root.style.setProperty("--jms-custom-splash-title", toCssContent(displayTitle));
   root.style.setProperty("--jms-custom-splash-caption", toCssContent(caption));
+  root.style.setProperty("--tanados-boot-logo-url", "url(../slider/src/images/tanados-logo.png?v={{version}})");
 
   function ensureMountNode() {
     return document.body || root;
@@ -1030,6 +1031,7 @@ html[data-jms-custom-splash="1"] #${LOGO_ID} {
   background-position: center center !important;
   background-repeat: no-repeat !important;
   background-size: contain !important;
+  background-image: var(--tanados-boot-logo-url) !important;
   filter:
     drop-shadow(0 20px 40px rgba(0, 0, 0, 0.46))
     drop-shadow(0 0 32px rgba(112, 165, 255, 0.2));

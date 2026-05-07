@@ -14,9 +14,9 @@ namespace Jellyfin.Plugin.TanadosUI
 {
     public class TanadosUIPlugin : BasePlugin<TanadosUIConfiguration>, IHasWebPages
     {
-        public override string Name => "TanadosUI";
+        public override string Name => "Tanados UI";
         public override Guid Id => Guid.Parse("c0b4a5e0-2f6a-4e70-9c5f-1e7c2d0b7f12");
-        public override string Description => "Inject custom JS into Jellyfin UI via in-memory transformation, middleware fallback, or index.html patch.";
+        public override string Description => "Tanados UI rebrands Jellyfin Web automatically with the Tanados logo/colors and adds the enhanced slider, home, playback, profile, and settings modules.";
 
         private readonly ILogger<TanadosUIPlugin> _logger;
         private readonly IApplicationPaths _paths;
@@ -208,7 +208,9 @@ namespace Jellyfin.Plugin.TanadosUI
         {
             var sb = new StringBuilder();
             sb.AppendLine("<!-- SL-INJECT BEGIN -->");
+            sb.AppendLine("<link rel=\"stylesheet\" href=\"" + AssetVersioning.AppendVersionQuery("../slider/src/tanados-branding.css") + "\">");
             sb.AppendLine(AssetVersioning.BuildBootstrapScript());
+            sb.AppendLine("<script type=\"module\" src=\"" + AssetVersioning.AppendVersionQuery("../slider/modules/tanadosBranding.js") + "\"></script>");
             sb.AppendLine($@"<script type=""module"" src=""{AssetVersioning.AppendVersionQuery("../Plugins/TanadosUI/runtime/storage-preload.js")}""></script>");
             sb.AppendLine($@"<script type=""module"" src=""{AssetVersioning.AppendVersionQuery("../slider/main.js")}""></script>");
             sb.AppendLine($@"<script type=""module"" src=""{AssetVersioning.AppendVersionQuery("../slider/modules/player/main.js")}""></script>");

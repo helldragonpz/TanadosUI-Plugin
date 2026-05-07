@@ -28,13 +28,13 @@
   const fallbackLabels = {
     webConfig: {
       heroEyebrow: "Plugin Configuration",
-      heroTitle: "TanadosUI Control Center",
+      heroTitle: "Tanados UI Control Center",
       heroBody: "Manage the <code>/slider</code> asset source, publish global settings, inspect runtime status, and review HTML snippet and web permission details from one screen.",
       heroLangLabel: "Selected Language",
       heroRootLabel: "Web UI Root",
       tabs: {
         TanadosUI: "TanadosUI",
-        TanadosUISettings: "TanadosUI Settings",
+        TanadosUISettings: "Tanados UI Settings",
         status: "Status",
         snippet: "HTML Snippet & Web Path & Permissions"
       },
@@ -47,7 +47,7 @@
         statusBody: "Quick verification for configuration state, player path resolution, and embedded asset fallback.",
         inMemoryTitle: "In-Memory Injection",
         inMemoryBody: "Checks whether index.html is being rewritten at response time without touching files on disk.",
-        TanadosUISettingsTitle: "TanadosUI Settings",
+        TanadosUISettingsTitle: "Tanados UI Settings",
         snippetTitle: "HTML Snippet",
         snippetBody: "The exact snippet TanadosUI injects into Jellyfin web.",
         envTitle: "Web Path & Permissions",
@@ -65,7 +65,7 @@
       actions: {
         save: "Save",
         publishGlobal: "Publish admin settings globally",
-        reloadTanadosUISettings: "Reload TanadosUI Settings",
+        reloadTanadosUISettings: "Reload Tanados UI Settings",
         refreshEnv: "Refresh Web Path & Permissions",
         copyAcl: "Copy permission commands",
         patch: "Patch index.html",
@@ -84,8 +84,8 @@
         physicalPatchFallbackDisabled: "Physical index.html patch fallback disabled.",
         statusPending: "Status has not been loaded yet.",
         snippetPending: "Snippet has not been loaded yet.",
-        TanadosUISettingsLoading: "TanadosUI settings are loading...",
-        TanadosUISettingsLoadFailed: "TanadosUI settings could not be loaded.",
+        TanadosUISettingsLoading: "Tanados UI settings are loading...",
+        TanadosUISettingsLoadFailed: "Tanados UI settings could not be loaded.",
         inMemoryChecking: "Checking in-memory injection...",
         envPending: "(not computed yet)"
       },
@@ -255,7 +255,7 @@
     host.__jmsTanadosUIReady = false;
     renderTanadosUISettingsPlaceholder(
       view,
-      t("webConfig.messages.TanadosUISettingsLoading", "TanadosUI settings are loading...")
+      t("webConfig.messages.TanadosUISettingsLoading", "Tanados UI settings are loading...")
     );
     if (reloadBtn) reloadBtn.disabled = true;
 
@@ -272,7 +272,7 @@
       const modal = settingsApi?.element || host.querySelector("#settings-modal");
 
       if (!modal || !settingsApi) {
-        throw new Error("TanadosUI settings page is not available.");
+        throw new Error("Tanados UI settings page is not available.");
       }
 
       host.__jmsTanadosUIApi = settingsApi;
@@ -281,7 +281,7 @@
       return modal;
     })()
       .catch((error) => {
-        const fallback = t("webConfig.messages.TanadosUISettingsLoadFailed", "TanadosUI settings could not be loaded.");
+        const fallback = t("webConfig.messages.TanadosUISettingsLoadFailed", "Tanados UI settings could not be loaded.");
         const detail = String(error?.message || "").trim();
         renderTanadosUISettingsPlaceholder(view, detail ? `${fallback} ${detail}` : fallback, "error");
         throw error;
@@ -313,7 +313,7 @@
 
     if (tabName === "TanadosUI-settings") {
       ensureTanadosUISettings(view).catch((error) => {
-        console.error("TanadosUI settings load failed:", error);
+        console.error("Tanados UI settings load failed:", error);
       });
     }
   }
@@ -338,7 +338,7 @@
 
   function applyTranslations(view) {
     setText(view, "#heroEyebrow", t("webConfig.heroEyebrow", "Plugin Configuration"));
-    setText(view, "#pageTitle", t("webConfig.heroTitle", "TanadosUI Control Center"));
+    setText(view, "#pageTitle", t("webConfig.heroTitle", "Tanados UI Control Center"));
     setHtml(view, "#pageIntro", t("webConfig.heroBody", fallbackLabels.webConfig.heroBody));
     setText(view, "#heroLangLabel", t("webConfig.heroLangLabel", "Selected Language"));
     setText(view, "#heroLangValue", getLanguageDisplayName(state.lang));
@@ -346,7 +346,7 @@
     setText(view, "#heroRootValue", webRootLabel());
 
     setText(view, "#tabTanadosUI", t("webConfig.tabs.TanadosUI", "TanadosUI"));
-    setText(view, "#tabTanadosUISettings", t("webConfig.tabs.TanadosUISettings", "TanadosUI Settings"));
+    setText(view, "#tabTanadosUISettings", t("webConfig.tabs.TanadosUISettings", "Tanados UI Settings"));
     setText(view, "#tabStatus", t("webConfig.tabs.status", "Status"));
     setText(view, "#tabSnippet", t("webConfig.tabs.snippet", "HTML Snippet & Web Path & Permissions"));
 
@@ -354,7 +354,7 @@
     setText(view, "#configCardBody", t("webConfig.sections.configBody", "Choose where TanadosUI serves slider assets from and how the player module path is resolved."));
     setText(view, "#actionsCardTitle", t("webConfig.sections.adminTitle", "Admin Actions"));
     setText(view, "#actionsCardBody", t("webConfig.sections.adminBody", "Save plugin settings or publish the current admin snapshot globally for every user profile."));
-    setText(view, "#TanadosUISettingsCardTitle", t("webConfig.sections.TanadosUISettingsTitle", "TanadosUI Settings"));
+    setText(view, "#TanadosUISettingsCardTitle", t("webConfig.sections.TanadosUISettingsTitle", "Tanados UI Settings"));
     setText(view, "#statusCardTitle", t("webConfig.sections.statusTitle", "Runtime Status"));
     setText(view, "#statusCardBody", t("webConfig.sections.statusBody", "Quick verification for configuration state, player path resolution, and embedded asset fallback."));
     setText(view, "#inmemCardTitle", t("webConfig.sections.inMemoryTitle", "In-Memory Injection"));
@@ -374,7 +374,7 @@
 
     setText(view, "#saveBtn", t("webConfig.actions.save", "Save"));
     setText(view, "#publishGlobalBtn", t("webConfig.actions.publishGlobal", "Publish admin settings globally"));
-    setText(view, "#reloadTanadosUISettingsBtn", t("webConfig.actions.reloadTanadosUISettings", "Reload TanadosUI Settings"));
+    setText(view, "#reloadTanadosUISettingsBtn", t("webConfig.actions.reloadTanadosUISettings", "Reload Tanados UI Settings"));
     setText(view, "#refreshEnvBtn", t("webConfig.actions.refreshEnv", "Refresh Web Path & Permissions"));
     setText(view, "#copyAclBtn", t("webConfig.actions.copyAcl", "Copy permission commands"));
     setText(view, "#patchBtn", t("webConfig.actions.patch", "Patch index.html"));
@@ -400,7 +400,7 @@
     if (!view.__TanadosUISettingsLoaded && !view.querySelector("#TanadosUISettingsHost #settings-modal")) {
       renderTanadosUISettingsPlaceholder(
         view,
-        t("webConfig.messages.TanadosUISettingsLoading", "TanadosUI settings are loading...")
+        t("webConfig.messages.TanadosUISettingsLoading", "Tanados UI settings are loading...")
       );
     }
 

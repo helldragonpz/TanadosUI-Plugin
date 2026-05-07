@@ -17,8 +17,8 @@ if command -v jq >/dev/null 2>&1; then
     jq --arg ts "$TS" --arg ver "$NEWVER" \
       '.timestamp = $ts
        | .version = $ver
-       | .imagePathLinux   = ("/var/lib/jellyfin/plugins/TanadosUI_" + $ver + "/icon.png")
-       | .imagePathWindows = ("%ProgramData%/Jellyfin/Server/plugins/TanadosUI_" + $ver + "/icon.png")' \
+       | .imagePathLinux   = ("/var/lib/jellyfin/plugins/Tanados UI_" + $ver + "/icon.png")
+       | .imagePathWindows = ("%ProgramData%/Jellyfin/Server/plugins/Tanados UI_" + $ver + "/icon.png")' \
       "$CLEAN" > "${FILE}.tmp"
   else
     jq --arg ts "$TS" '.timestamp = $ts' "$CLEAN" > "${FILE}.tmp"
@@ -32,17 +32,17 @@ else
     sed -E -i "s#\"version\"\\s*:\\s*\"[^\"]*\"#\"version\": \"$NEWVER\"#g" "$FILE" || true
     if grep -qE "\"imagePathLinux\"" "$FILE"; then
       sed -E -i \
-        "s#(\"imagePathLinux\"\\s*:\\s*\")/var/lib/jellyfin/plugins/TanadosUI_[^\"]+/icon\\.png(\")#\1/var/lib/jellyfin/plugins/TanadosUI_${NEWVER}/icon.png\2#g" \
+        "s#(\"imagePathLinux\"\\s*:\\s*\")/var/lib/jellyfin/plugins/Tanados UI_[^\"]+/icon\\.png(\")#\1/var/lib/jellyfin/plugins/Tanados UI_${NEWVER}/icon.png\2#g" \
         "$FILE" || true
     else
-      sed -E -i "s#}\\s*$#,\n  \"imagePathLinux\": \"/var/lib/jellyfin/plugins/TanadosUI_${NEWVER}/icon.png\"\n}#g" "$FILE" || true
+      sed -E -i "s#}\\s*$#,\n  \"imagePathLinux\": \"/var/lib/jellyfin/plugins/Tanados UI_${NEWVER}/icon.png\"\n}#g" "$FILE" || true
     fi
     if grep -qE "\"imagePathWindows\"" "$FILE"; then
       sed -E -i \
-        "s#(\"imagePathWindows\"\\s*:\\s*\")%ProgramData%/Jellyfin/Server/plugins/TanadosUI_[^\"]+/icon\\.png(\")#\1%ProgramData%/Jellyfin/Server/plugins/TanadosUI_${NEWVER}/icon.png\2#g" \
+        "s#(\"imagePathWindows\"\\s*:\\s*\")%ProgramData%/Jellyfin/Server/plugins/Tanados UI_[^\"]+/icon\\.png(\")#\1%ProgramData%/Jellyfin/Server/plugins/Tanados UI_${NEWVER}/icon.png\2#g" \
         "$FILE" || true
     else
-      sed -E -i "s#}\\s*$#,\n  \"imagePathWindows\": \"%ProgramData%/Jellyfin/Server/plugins/TanadosUI_${NEWVER}/icon.png\"\n}#g" "$FILE" || true
+      sed -E -i "s#}\\s*$#,\n  \"imagePathWindows\": \"%ProgramData%/Jellyfin/Server/plugins/Tanados UI_${NEWVER}/icon.png\"\n}#g" "$FILE" || true
     fi
   fi
 fi
@@ -53,6 +53,6 @@ echo "✅ meta.json güncellendi:"
 echo "   timestamp       = $TS"
 [ -n "$NEWVER" ] && {
   echo "   version         = $NEWVER"
-  echo "   imagePathLinux  = /var/lib/jellyfin/plugins/TanadosUI_${NEWVER}/icon.png"
-  echo "   imagePathWindows= %ProgramData%/Jellyfin/Server/plugins/TanadosUI_${NEWVER}/icon.png"
+  echo "   imagePathLinux  = /var/lib/jellyfin/plugins/Tanados UI_${NEWVER}/icon.png"
+  echo "   imagePathWindows= %ProgramData%/Jellyfin/Server/plugins/Tanados UI_${NEWVER}/icon.png"
 }

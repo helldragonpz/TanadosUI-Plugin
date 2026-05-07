@@ -752,7 +752,7 @@ function getCustomSplashLoadingFallback(title) {
 }
 
 function resolveCustomSplashDefaults(labels = {}) {
-  const defaultTitle = String(labels.customSplashTitle || "TanadosUI").trim() || "TanadosUI";
+  const defaultTitle = String(labels.customSplashTitle || "Tanados UI").trim() || "Tanados UI";
   const fallbackCaption = getCustomSplashLoadingFallback(defaultTitle);
   const defaultCaption = String(labels.customSplashLoadingText || fallbackCaption).trim()
     || fallbackCaption;

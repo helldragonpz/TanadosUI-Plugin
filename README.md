@@ -1,7 +1,7 @@
-<h1 align="center">Jellyfin TanadosUI Plugin</h1>
+<h1 align="center">Jellyfin Tanados UI Plugin</h1>
 
 <p align="center">
-  <img width="180" height="180" alt="Jellyfin TanadosUI Plugin" src="https://github.com/helldragonpz/TanadosUI-Plugin/blob/master/img/icon.png" />
+  <img width="180" height="180" alt="Jellyfin Tanados UI Plugin" src="https://github.com/user-attachments/assets/29947627-b2ff-4ecd-8a2b-4df932aca657" />
 </p>
 
 <p align="center">
@@ -47,7 +47,7 @@
 
 ## Overview
 
-**Jellyfin TanadosUI Plugin** appears in Jellyfin as **TanadosUI** and acts as an all-in-one frontend enhancement layer built around a modular slider system located in `Resources/slider/`.
+**Jellyfin Tanados UI Plugin** appears in Jellyfin as **Tanados UI** and acts as an all-in-one frontend enhancement layer built around a modular slider system located in `Resources/slider/`.
 
 Rather than applying a single visual tweak, it enhances the entire browsing experience — including home screen presentation, metadata depth, hover interactions, profile flow, music playback, pause behavior, library discovery, and settings management.
 
@@ -113,7 +113,7 @@ The goal is simple: make Jellyfin feel more polished, more personal, and more pr
 https://raw.githubusercontent.com/Tanados/Jellyfin-TanadosUI-Plugin/master/manifest.json
 ```
 4. Go to **Plugins → Available**
-5. Install **TanadosUI**
+5. Install **Tanados UI**
 6. Restart Jellyfin
 
 ---
@@ -121,7 +121,7 @@ https://raw.githubusercontent.com/Tanados/Jellyfin-TanadosUI-Plugin/master/manif
 ## Uninstall
 
 1. Open **Jellyfin → Plugins**
-2. Uninstall **TanadosUI**
+2. Uninstall **Tanados UI**
 3. Restart Jellyfin
 4. Hard refresh (**Ctrl + F5 or Ctrl + Shift + R**)
 
@@ -187,3 +187,23 @@ SOFTWARE.
 ## Disclaimer
 
 This software is provided "as is", without warranty of any kind. Use it at your own risk.
+
+
+## Tanados UI Rebrand Notes
+
+This fork includes automatic Jellyfin Web branding:
+
+- Tanados logo is injected into Jellyfin Web header/login/splash logo areas.
+- Browser favicon and page title are updated from Jellyfin to Tanados UI where possible.
+- Green/teal UI accents are overridden with Tanados purple/gold styling.
+- Branding assets live in `Resources/slider/src/images/` and `img/`.
+
+After install/update, restart Jellyfin and hard refresh the browser with `Ctrl + F5`. Native Jellyfin clients may not use server-side web branding.
+
+To build the installable server ZIP locally:
+
+```bash
+./scripts/package-tanados-ui.sh 2.8.1.0
+```
+
+The script writes `dist/TanadosUI-2.8.1.0-server.zip` and updates `manifest.json` with the SHA256 checksum.

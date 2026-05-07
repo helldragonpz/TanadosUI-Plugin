@@ -16,7 +16,9 @@ namespace Jellyfin.Plugin.TanadosUI
         {
             var sb = new StringBuilder();
             sb.AppendLine(BeginMark);
+            sb.AppendLine("<link rel=\"stylesheet\" href=\"" + AssetVersioning.AppendVersionQuery("../slider/src/tanados-branding.css") + "\">");
             sb.AppendLine(AssetVersioning.BuildBootstrapScript());
+            sb.AppendLine("<script type=\"module\" src=\"" + AssetVersioning.AppendVersionQuery("../slider/modules/tanadosBranding.js") + "\"></script>");
             sb.AppendLine($@"<script type=""module"" src=""{AssetVersioning.AppendVersionQuery("../Plugins/TanadosUI/runtime/storage-preload.js")}""></script>");
             sb.AppendLine($@"<script type=""module"" src=""{AssetVersioning.AppendVersionQuery("../slider/main.js")}""></script>");
             sb.AppendLine($@"<script type=""module"" src=""{AssetVersioning.AppendVersionQuery("../slider/modules/player/main.js")}""></script>");

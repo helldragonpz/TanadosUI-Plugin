@@ -1,0 +1,148 @@
+/* Tanados UI automatic Jellyfin Web rebrand. Loaded by the Tanados UI plugin. */
+:root {
+  --tanados-logo-url: url("./images/tanados-logo.png");
+  --tanados-favicon-url: url("./images/tanados-favicon.png");
+  --tanados-bg: #090514;
+  --tanados-surface: rgba(22, 12, 40, 0.86);
+  --tanados-surface-strong: rgba(34, 18, 60, 0.94);
+  --tanados-purple: #7c3aed;
+  --tanados-purple-soft: #a78bfa;
+  --tanados-gold: #f6c453;
+  --tanados-gold-soft: #ffe6a3;
+  --tanados-text: #f8f3ff;
+}
+
+html[data-tanados-ui-brand="1"] body,
+html[data-tanados-ui-brand="1"] .backgroundContainer,
+html[data-tanados-ui-brand="1"] .skinHeader,
+html[data-tanados-ui-brand="1"] .mainDrawer,
+html[data-tanados-ui-brand="1"] .navMenuOption-selected {
+  --theme-primary-color: var(--tanados-purple) !important;
+  --theme-accent-color: var(--tanados-gold) !important;
+  --accent: var(--tanados-gold) !important;
+  --secondary-accent: var(--tanados-purple-soft) !important;
+}
+
+html[data-tanados-ui-brand="1"] .paper-icon-button-light:hover,
+html[data-tanados-ui-brand="1"] .raised,
+html[data-tanados-ui-brand="1"] .button-submit,
+html[data-tanados-ui-brand="1"] .emby-button.raised,
+html[data-tanados-ui-brand="1"] .fab,
+html[data-tanados-ui-brand="1"] .button-accent {
+  background: linear-gradient(135deg, var(--tanados-purple), #4c1d95) !important;
+  color: var(--tanados-text) !important;
+}
+
+html[data-tanados-ui-brand="1"] a,
+html[data-tanados-ui-brand="1"] .button-link,
+html[data-tanados-ui-brand="1"] .listItemIcon,
+html[data-tanados-ui-brand="1"] .itemProgressBarForeground,
+html[data-tanados-ui-brand="1"] .playedIndicator,
+html[data-tanados-ui-brand="1"] .checkboxIcon-checked,
+html[data-tanados-ui-brand="1"] .emby-checkbox:checked + span + .checkboxOutline,
+html[data-tanados-ui-brand="1"] .emby-checkbox:checked + .checkboxOutline {
+  color: var(--tanados-gold) !important;
+  border-color: var(--tanados-gold) !important;
+}
+
+html[data-tanados-ui-brand="1"] .itemProgressBarForeground,
+html[data-tanados-ui-brand="1"] .mdl-slider::-webkit-slider-thumb,
+html[data-tanados-ui-brand="1"] .mdl-slider-background-flex > div:nth-child(2) {
+  background-color: var(--tanados-gold) !important;
+}
+
+/* Header / drawer / classic logo zones */
+html[data-tanados-ui-brand="1"] .pageTitleWithLogo,
+html[data-tanados-ui-brand="1"] .headerLogo,
+html[data-tanados-ui-brand="1"] .embyLogo,
+html[data-tanados-ui-brand="1"] .adminDrawerLogo,
+html[data-tanados-ui-brand="1"] [data-tanados-logo="true"] {
+  background-image: var(--tanados-logo-url) !important;
+  background-repeat: no-repeat !important;
+  background-position: center left !important;
+  background-size: contain !important;
+  color: transparent !important;
+  text-shadow: none !important;
+  min-width: 170px !important;
+  min-height: 42px !important;
+}
+
+html[data-tanados-ui-brand="1"] .pageTitleWithLogo::before,
+html[data-tanados-ui-brand="1"] .headerLogo::before,
+html[data-tanados-ui-brand="1"] .embyLogo::before,
+html[data-tanados-ui-brand="1"] .adminDrawerLogo::before {
+  content: "" !important;
+}
+
+html[data-tanados-ui-brand="1"] img[data-tanados-logo="true"],
+html[data-tanados-ui-brand="1"] .imgLogoIcon[data-tanados-logo="true"] {
+  object-fit: contain !important;
+  width: auto !important;
+  max-width: 230px !important;
+  max-height: 92px !important;
+}
+
+/* Jellyfin login / splash pages */
+html[data-tanados-ui-brand="1"] #loginPage,
+html[data-tanados-ui-brand="1"] .loginPage,
+html[data-tanados-ui-brand="1"] [data-role="page"][id*="login" i] {
+  background:
+    radial-gradient(circle at 15% 12%, rgba(124, 58, 237, 0.32), transparent 30%),
+    radial-gradient(circle at 85% 18%, rgba(246, 196, 83, 0.22), transparent 26%),
+    linear-gradient(160deg, #050208 0%, #120824 45%, #050208 100%) !important;
+}
+
+html[data-tanados-ui-brand="1"] #loginPage .padded-left.padded-right,
+html[data-tanados-ui-brand="1"] .manualLoginForm,
+html[data-tanados-ui-brand="1"] form.localLoginForm {
+  border-radius: 26px !important;
+  background: rgba(9, 5, 20, 0.72) !important;
+  border: 1px solid rgba(246, 196, 83, 0.22) !important;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55), 0 0 70px rgba(124, 58, 237, 0.18) !important;
+  backdrop-filter: blur(16px) saturate(145%);
+}
+
+html[data-tanados-ui-brand="1"] #loginPage h1,
+html[data-tanados-ui-brand="1"] .loginDisclaimerContainer h1,
+html[data-tanados-ui-brand="1"] .splashLogo,
+html[data-tanados-ui-brand="1"] #jms-boot-splash-logo {
+  background-image: var(--tanados-logo-url) !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: contain !important;
+  color: transparent !important;
+  min-width: min(72vw, 360px) !important;
+  min-height: 110px !important;
+  font-size: 0 !important;
+}
+
+html[data-tanados-ui-brand="1"] #loginPage h1::after {
+  content: "Tanados UI";
+  display: block;
+  margin-top: 112px;
+  color: var(--tanados-gold-soft);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Tanados UI plugin accents */
+html[data-tanados-ui-brand="1"] .jms-slider,
+html[data-tanados-ui-brand="1"] .jms-hero,
+html[data-tanados-ui-brand="1"] .jms-card,
+html[data-tanados-ui-brand="1"] .jms-modal,
+html[data-tanados-ui-brand="1"] .jms-settings-card,
+html[data-tanados-ui-brand="1"] .TanadosUI-settings-card {
+  --jms-accent: var(--tanados-gold) !important;
+  --jms-accent-2: var(--tanados-purple-soft) !important;
+  --jms-primary: var(--tanados-purple) !important;
+}
+
+html[data-tanados-ui-brand="1"] .jms-chip,
+html[data-tanados-ui-brand="1"] .jms-badge,
+html[data-tanados-ui-brand="1"] .jms-action-primary {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.94), rgba(246, 196, 83, 0.82)) !important;
+  color: #fff !important;
+}

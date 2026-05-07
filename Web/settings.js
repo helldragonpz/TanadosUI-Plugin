@@ -24,7 +24,7 @@ async function loadSettingsPageModule() {
 export async function mountTanadosUISettingsPage(host, options = {}) {
   const mod = await loadSettingsPageModule();
   if (typeof mod?.mountTanadosUISettingsPage !== "function") {
-    throw new Error("TanadosUI settings page module is not available.");
+    throw new Error("Tanados UI settings page module is not available.");
   }
   return mod.mountTanadosUISettingsPage(host, options);
 }
