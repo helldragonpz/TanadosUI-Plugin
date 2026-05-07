@@ -472,7 +472,7 @@ export function createAboutPanel(labels) {
   aboutContent.className = 'about-content';
 
   const creatorInfo = document.createElement('p');
-  creatorInfo.textContent = ` G-GRBZ ${labels.aboutCreator || 'Tarafından Hazarlanmıştır'}`;
+  creatorInfo.textContent = ` Tanados ${labels.aboutCreator || 'Tarafından Hazarlanmıştır'}`;
   creatorInfo.style.fontWeight = 'bold';
   creatorInfo.style.marginBottom = '20px';
 
@@ -549,7 +549,7 @@ export function createAboutPanel(labels) {
     resultSpan.textContent = '';
 
     try {
-      const { version: latest, html_url } = await fetchLatestGitHubVersion("G-grbz", "Jellyfin-TanadosUI-Plugin");
+      const { version: latest, html_url } = await fetchLatestGitHubVersion("Tanados", "Jellyfin-TanadosUI-Plugin");
       if (!latest) {
         statusP.textContent = labels.updateUnknown || 'Son sürüm bilgisi alınamadı.';
       } else {

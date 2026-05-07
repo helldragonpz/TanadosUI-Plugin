@@ -23,7 +23,7 @@ export function compareSemver(a = "0.0.0", b = "0.0.0") {
   return 0;
 }
 
-export async function fetchLatestGitHubVersion(owner = "G-grbz", repo = "Jellyfin-TanadosUI-Plugin") {
+export async function fetchLatestGitHubVersion(owner = "Tanados", repo = "Jellyfin-TanadosUI-Plugin") {
   try {
     const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`, {
       headers: { "Accept": "application/vnd.github+json" }
@@ -80,7 +80,7 @@ export function startUpdatePolling(options = {}) {
   const {
     intervalMs = 60 * 60 * 1000,
     minGapMs   = 60 * 60 * 1000,
-    owner = "G-grbz",
+    owner = "Tanados",
     repo  = "Jellyfin-TanadosUI-Plugin",
     storagePrefix = "JMS_UPT_",
     enabled = true,
