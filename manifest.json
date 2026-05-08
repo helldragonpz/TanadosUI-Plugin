@@ -13,7 +13,7 @@
         "changelog": "v2.8.1.1\n\nFixes:\n- Fixed Tanados UI Settings failing to load because settingsPage.js could indirectly request a missing Bulgarian language module: /slider/language/bul_bg.js\n- Added bul_bg.js as a compatibility alias and switched the language index to the existing bul.js module\n- Set the default preferred trailer language to bg-BG\n- Updated build packaging to write Jellyfin's expected MD5 checksum into manifest.json\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Perform a hard browser refresh (Ctrl + F5) after updating\n- If the old settings error remains, clear browser cache for the Jellyfin server address",
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.8.1.1/TanadosUI-2.8.1.1-server.zip",
-        "checksum": "f2997dcedd3c05ad13fb7babe1a4af5173118ed797ce7e143b9cd5edd94cb541",
+        "checksum": "6FF89273919413F04832E6E162288494",
         "timestamp": "2026-05-08T15:36:39.4566476Z"
       }
     ]
