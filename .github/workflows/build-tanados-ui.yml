@@ -6,7 +6,7 @@ on:
       version:
         description: Tanados UI version
         required: true
-        default: 2.8.1.0
+        default: 2.8.1.1
 
 jobs:
   build:
@@ -33,5 +33,5 @@ jobs:
           name: TanadosUI-${{ github.event.inputs.version }}-server
           path: |
             dist/TanadosUI-${{ github.event.inputs.version }}-server.zip
-            dist/checksum-sha256.txt
+            dist/checksum-md5.txt
             manifest.json

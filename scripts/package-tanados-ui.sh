@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-2.8.1.0}"
+VERSION="${1:-2.8.1.1}"
 REPO_SLUG="${REPO_SLUG:-helldragonpz/TanadosUI-Plugin}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
@@ -33,39 +33,40 @@ cp "$PUBLISH_DIR"/Jellyfin.Plugin.TanadosUI.dll "$PACKAGE_DIR/"
 [ -f "$PUBLISH_DIR/Jellyfin.Plugin.TanadosUI.pdb" ] && cp "$PUBLISH_DIR/Jellyfin.Plugin.TanadosUI.pdb" "$PACKAGE_DIR/"
 cp meta.json "$PACKAGE_DIR/"
 cp img/icon.png "$PACKAGE_DIR/icon.png"
+[ -f img/tanados-logo.png ] && cp img/tanados-logo.png "$PACKAGE_DIR/tanados-logo.png"
 
 (
   cd "$DIST_DIR/package"
   zip -qr "$ZIP_PATH" "Tanados UI_$VERSION"
 )
 
-if command -v sha256sum >/dev/null 2>&1; then
-  SHA256="$(sha256sum "$ZIP_PATH" | awk '{print $1}')"
-elif command -v shasum >/dev/null 2>&1; then
-  SHA256="$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
+if command -v md5sum >/dev/null 2>&1; then
+  MD5="$(md5sum "$ZIP_PATH" | awk '{print $1}')"
+elif command -v md5 >/dev/null 2>&1; then
+  MD5="$(md5 -q "$ZIP_PATH")"
 else
-  echo "sha256sum/shasum was not found; cannot calculate checksum." >&2
+  echo "md5sum/md5 was not found; cannot calculate Jellyfin repository checksum." >&2
   exit 1
 fi
 
-echo "$SHA256" > "$DIST_DIR/checksum-sha256.txt"
+printf '%s\n' "$MD5" > "$DIST_DIR/checksum-md5.txt"
 
 python3 - <<PY
 import json, datetime
 from pathlib import Path
 manifest_path = Path('manifest.json')
-manifest = json.loads(manifest_path.read_text())
+manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
 version = '$VERSION'
-sha256 = '$SHA256'
+md5 = '$MD5'
 repo = '$REPO_SLUG'
 release_url = f'https://github.com/{repo}/releases/download/{version}/TanadosUI-{version}-server.zip'
 manifest[0]['versions'][0]['version'] = version
 manifest[0]['versions'][0]['sourceUrl'] = release_url
-manifest[0]['versions'][0]['checksum'] = sha256
+manifest[0]['versions'][0]['checksum'] = md5
 manifest[0]['versions'][0]['timestamp'] = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
-manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
+manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
 PY
 
 echo "Built: $ZIP_PATH"
-echo "SHA256: $SHA256"
-echo "manifest.json was updated with the checksum and release URL."
+echo "MD5: $MD5"
+echo "manifest.json was updated with the Jellyfin MD5 checksum and release URL."

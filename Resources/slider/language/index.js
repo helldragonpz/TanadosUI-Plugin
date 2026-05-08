@@ -4,7 +4,7 @@ import { languageLabels as deuLabels } from './deu.js';
 import { languageLabels as fraLabels } from './fre.js';
 import { languageLabels as rusLabels } from './rus.js';
 import { languageLabels as spaLabels } from './spa.js';
-import { languageLabels as bulLabels } from './bul_bg.js';
+import { languageLabels as bulLabels } from './bul.js';
 
 export const AUTO_LANGUAGE_CHANGE_EVENT = 'jms:auto-language-changed';
 

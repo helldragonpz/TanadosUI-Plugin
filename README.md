@@ -203,7 +203,7 @@ After install/update, restart Jellyfin and hard refresh the browser with `Ctrl +
 To build the installable server ZIP locally:
 
 ```bash
-./scripts/package-tanados-ui.sh 2.8.1.0
+./scripts/package-tanados-ui.sh 2.8.1.1
 ```
 
-The script writes `dist/TanadosUI-2.8.1.0-server.zip` and updates `manifest.json` with the SHA256 checksum.
+The script writes `dist/TanadosUI-2.8.1.1-server.zip` and updates `manifest.json` with the MD5 checksum.

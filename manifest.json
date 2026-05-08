@@ -9,12 +9,12 @@
     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
     "versions": [
       {
-        "version": "2.8.1.0",
-        "changelog": "v2.8.1.0\n\nChanges:\n- Added automatic Tanados logo replacement for Jellyfin Web header, splash/login logo, image logos, document title, and favicons\n- Added Tanados branding CSS loaded by the plugin injection block without manual Custom CSS\n- Added Tanados purple/gold accent overrides to reduce the original green/teal styling\n- Added optimized Tanados logo and favicon assets under /slider/src/images\n- Updated visible plugin naming to Tanados UI\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Perform a hard browser refresh (Ctrl + F5) after updating\n- Native Jellyfin apps may not use server-side web branding; this targets Jellyfin Web loaded from your server",
+        "version": "2.8.1.1",
+        "changelog": "v2.8.1.1\n\nFixes:\n- Fixed Tanados UI Settings failing to load because settingsPage.js could indirectly request a missing Bulgarian language module: /slider/language/bul_bg.js\n- Added bul_bg.js as a compatibility alias and switched the language index to the existing bul.js module\n- Set the default preferred trailer language to bg-BG\n- Updated build packaging to write Jellyfin's expected MD5 checksum into manifest.json\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Perform a hard browser refresh (Ctrl + F5) after updating\n- If the old settings error remains, clear browser cache for the Jellyfin server address",
         "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.8.1.0/TanadosUI-2.8.1.0-server.zip",
-        "checksum": "97BB04B3F09BB6CB8007C002063A91B7",
-        "timestamp": "2026-05-07T19:57:24.1935272Z"
+        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.8.1.1/TanadosUI-2.8.1.1-server.zip",
+        "checksum": "REPLACE_WITH_MD5_AFTER_BUILD",
+        "timestamp": "2026-05-08T14:42:22Z"
       }
     ]
   }

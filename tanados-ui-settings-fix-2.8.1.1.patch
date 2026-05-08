@@ -1,0 +1,262 @@
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/.github/workflows/build-tanados-ui.yml TanadosUI-fixed-settings-source-2.8.1.1/.github/workflows/build-tanados-ui.yml
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/.github/workflows/build-tanados-ui.yml	2026-05-07 19:13:51.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/.github/workflows/build-tanados-ui.yml	2026-05-08 14:42:23.643037706 +0000
+@@ -6,7 +6,7 @@
+       version:
+         description: Tanados UI version
+         required: true
+-        default: 2.8.1.0
++        default: 2.8.1.1
+ 
+ jobs:
+   build:
+@@ -33,5 +33,5 @@
+           name: TanadosUI-${{ github.event.inputs.version }}-server
+           path: |
+             dist/TanadosUI-${{ github.event.inputs.version }}-server.zip
+-            dist/checksum-sha256.txt
++            dist/checksum-md5.txt
+             manifest.json
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/JMSFusion.csproj TanadosUI-fixed-settings-source-2.8.1.1/JMSFusion.csproj
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/JMSFusion.csproj	2026-05-07 19:12:54.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/JMSFusion.csproj	2026-05-08 14:42:21.954471802 +0000
+@@ -7,7 +7,7 @@
+     <AssemblyName>Jellyfin.Plugin.TanadosUI</AssemblyName>
+     <RootNamespace>Jellyfin.Plugin.TanadosUI</RootNamespace>
+ 
+-    <Version>2.8.1.0</Version>
++    <Version>2.8.1.1</Version>
+     <AssemblyVersion>$(Version)</AssemblyVersion>
+     <FileVersion>$(Version)</FileVersion>
+     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/JMSFusionConfiguration.cs TanadosUI-fixed-settings-source-2.8.1.1/JMSFusionConfiguration.cs
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/JMSFusionConfiguration.cs	2026-05-07 19:11:28.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/JMSFusionConfiguration.cs	2026-05-08 14:42:22.019596779 +0000
+@@ -56,7 +56,7 @@
+         public string TmdbApiKey { get; set; } = "CHANGE_ME";
+ 
+         [JsonPropertyName("preferredLang")]
+-        public string PreferredLang { get; set; } = "tr-TR";
++        public string PreferredLang { get; set; } = "bg-BG";
+ 
+         [JsonPropertyName("fallbackLang")]
+         public string FallbackLang { get; set; } = "en-US";
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/README.md TanadosUI-fixed-settings-source-2.8.1.1/README.md
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/README.md	2026-05-07 19:12:54.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/README.md	2026-05-08 14:42:22.023178126 +0000
+@@ -203,7 +203,7 @@
+ To build the installable server ZIP locally:
+ 
+ ```bash
+-./scripts/package-tanados-ui.sh 2.8.1.0
++./scripts/package-tanados-ui.sh 2.8.1.1
+ ```
+ 
+-The script writes `dist/TanadosUI-2.8.1.0-server.zip` and updates `manifest.json` with the SHA256 checksum.
++The script writes `dist/TanadosUI-2.8.1.1-server.zip` and updates `manifest.json` with the MD5 checksum.
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/Resources/slider/language/bul_bg.js TanadosUI-fixed-settings-source-2.8.1.1/Resources/slider/language/bul_bg.js
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/Resources/slider/language/bul_bg.js	1970-01-01 00:00:00.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/Resources/slider/language/bul_bg.js	2026-05-08 14:42:22.019220838 +0000
+@@ -0,0 +1,6 @@
++// Compatibility alias for older Tanados UI/MonWUI imports.
++// The real Bulgarian labels live in bul.js.
++import { languageLabels } from './bul.js';
++
++export { languageLabels };
++export default languageLabels;
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/Resources/slider/language/index.js TanadosUI-fixed-settings-source-2.8.1.1/Resources/slider/language/index.js
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/Resources/slider/language/index.js	2026-05-07 19:50:08.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/Resources/slider/language/index.js	2026-05-08 14:42:22.018967799 +0000
+@@ -4,7 +4,7 @@
+ import { languageLabels as fraLabels } from './fre.js';
+ import { languageLabels as rusLabels } from './rus.js';
+ import { languageLabels as spaLabels } from './spa.js';
+-import { languageLabels as bulLabels } from './bul_bg.js';
++import { languageLabels as bulLabels } from './bul.js';
+ 
+ export const AUTO_LANGUAGE_CHANGE_EVENT = 'jms:auto-language-changed';
+ 
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/Resources/slider/modules/settings/trailersPage.js TanadosUI-fixed-settings-source-2.8.1.1/Resources/slider/modules/settings/trailersPage.js
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/Resources/slider/modules/settings/trailersPage.js	2026-05-07 19:11:28.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/Resources/slider/modules/settings/trailersPage.js	2026-05-08 14:42:22.020231412 +0000
+@@ -1143,7 +1143,7 @@
+       jfBaseAutoNote.textContent = L.jfBaseAutoNote;
+       adminOnlyWrap.appendChild(jfBaseAutoNote);
+ 
+-      adminOnlyWrap.appendChild(createTextInput('PreferredLang', L.preferredLang, pickConfigValue(currentConfig, 'preferredLang', 'PreferredLang') || 'tr-TR'));
++      adminOnlyWrap.appendChild(createTextInput('PreferredLang', L.preferredLang, pickConfigValue(currentConfig, 'preferredLang', 'PreferredLang') || 'bg-BG'));
+       adminOnlyWrap.appendChild(createTextInput('FallbackLang', L.fallbackLang, pickConfigValue(currentConfig, 'fallbackLang', 'FallbackLang') || 'en-US'));
+       adminOnlyWrap.appendChild(createNumberInputWrap(
+         'MaxConcurrentDownloads',
+@@ -1345,7 +1345,7 @@
+       runDownloader: getChk(trailerDownloaderCheckbox)?.checked || false,
+       runUrlNfo: getChk(trailerUrlNfoCheckbox)?.checked || false,
+       jfBase: autoJfBase,
+-      preferredLang: document.getElementById('PreferredLang')?.value || pickConfigValue(currentConfig, 'preferredLang', 'PreferredLang') || 'tr-TR',
++      preferredLang: document.getElementById('PreferredLang')?.value || pickConfigValue(currentConfig, 'preferredLang', 'PreferredLang') || 'bg-BG',
+       fallbackLang: document.getElementById('FallbackLang')?.value || pickConfigValue(currentConfig, 'fallbackLang', 'FallbackLang') || 'en-US',
+       maxConcurrentDownloads: normalizeConcurrentDownloads(
+         document.getElementById('MaxConcurrentDownloads')?.value
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/TANADOS_UI_FINISHED_NOTES.md TanadosUI-fixed-settings-source-2.8.1.1/TANADOS_UI_FINISHED_NOTES.md
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/TANADOS_UI_FINISHED_NOTES.md	2026-05-07 19:13:51.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/TANADOS_UI_FINISHED_NOTES.md	2026-05-08 14:42:22.024089349 +0000
+@@ -1,6 +1,6 @@
+ # Tanados UI finished rework
+ 
+-Version: `2.8.1.0`
++Version: `2.8.1.1`
+ 
+ ## Added in this package
+ 
+@@ -30,17 +30,17 @@
+ Install .NET SDK 9.0, then run:
+ 
+ ```bash
+-./scripts/package-tanados-ui.sh 2.8.1.0
++./scripts/package-tanados-ui.sh 2.8.1.1
+ ```
+ 
+ The script outputs:
+ 
+ ```text
+-dist/TanadosUI-2.8.1.0-server.zip
+-dist/checksum-sha256.txt
++dist/TanadosUI-2.8.1.1-server.zip
++dist/checksum-md5.txt
+ ```
+ 
+-It also updates `manifest.json` with the SHA256 checksum.
++It also updates `manifest.json` with the MD5 checksum.
+ 
+ ## Install/update in Jellyfin
+ 
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/TANADOS_UI_SETTINGS_FIX.md TanadosUI-fixed-settings-source-2.8.1.1/TANADOS_UI_SETTINGS_FIX.md
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/TANADOS_UI_SETTINGS_FIX.md	1970-01-01 00:00:00.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/TANADOS_UI_SETTINGS_FIX.md	2026-05-08 14:42:22.024877494 +0000
+@@ -0,0 +1,19 @@
++# Tanados UI 2.8.1.1 settings fix
++
++This source fixes the Jellyfin Web error:
++
++```text
++Failed to fetch dynamically imported module: /slider/modules/settingsPage.js
++```
++
++Root cause: the settings module loads the language index, and the previous source referenced `Resources/slider/language/bul_bg.js` even though only `bul.js` existed.
++
++Changes:
++
++- Added `Resources/slider/language/bul_bg.js` as a compatibility alias.
++- Changed `Resources/slider/language/index.js` to import Bulgarian labels from `bul.js`.
++- Bumped the plugin version to `2.8.1.1`.
++- Changed the package script to generate Jellyfin's expected MD5 checksum and update `manifest.json`.
++- Set the default preferred trailer language to `bg-BG`.
++
++After installing the rebuilt plugin, restart Jellyfin and hard refresh the browser with `Ctrl + F5`. If the old error remains, clear cache for your Jellyfin IP/domain.
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/manifest.json TanadosUI-fixed-settings-source-2.8.1.1/manifest.json
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/manifest.json	2026-05-07 19:12:54.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/manifest.json	2026-05-08 14:42:22.020846376 +0000
+@@ -9,12 +9,12 @@
+     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
+     "versions": [
+       {
+-        "version": "2.8.1.0",
+-        "changelog": "v2.8.1.0\n\nChanges:\n- Added automatic Tanados logo replacement for Jellyfin Web header, splash/login logo, image logos, document title, and favicons\n- Added Tanados branding CSS loaded by the plugin injection block without manual Custom CSS\n- Added Tanados purple/gold accent overrides to reduce the original green/teal styling\n- Added optimized Tanados logo and favicon assets under /slider/src/images\n- Updated visible plugin naming to Tanados UI\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Perform a hard browser refresh (Ctrl + F5) after updating\n- Native Jellyfin apps may not use server-side web branding; this targets Jellyfin Web loaded from your server",
++        "version": "2.8.1.1",
++        "changelog": "v2.8.1.1\n\nFixes:\n- Fixed Tanados UI Settings failing to load because settingsPage.js could indirectly request a missing Bulgarian language module: /slider/language/bul_bg.js\n- Added bul_bg.js as a compatibility alias and switched the language index to the existing bul.js module\n- Set the default preferred trailer language to bg-BG\n- Updated build packaging to write Jellyfin's expected MD5 checksum into manifest.json\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Perform a hard browser refresh (Ctrl + F5) after updating\n- If the old settings error remains, clear browser cache for the Jellyfin server address",
+         "targetAbi": "10.11.0.0",
+-        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.8.1.0/TanadosUI-2.8.1.0-server.zip",
+-        "checksum": "REPLACE_WITH_SHA256_AFTER_BUILD",
+-        "timestamp": "2026-05-07T19:12:54Z"
++        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.8.1.1/TanadosUI-2.8.1.1-server.zip",
++        "checksum": "REPLACE_WITH_MD5_AFTER_BUILD",
++        "timestamp": "2026-05-08T14:42:22Z"
+       }
+     ]
+   }
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/meta.json TanadosUI-fixed-settings-source-2.8.1.1/meta.json
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/meta.json	2026-05-07 19:12:54.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/meta.json	2026-05-08 14:42:22.021962951 +0000
+@@ -3,13 +3,13 @@
+   "description": "Tanados UI rebrands Jellyfin Web automatically with the Tanados logo/colors and adds the enhanced slider, home, playback, profile, and settings modules.",
+   "name": "Tanados UI",
+   "owner": "Tanados",
+-  "version": "2.8.1.0",
++  "version": "2.8.1.1",
+   "status": "Active",
+   "autoUpdate": true,
+   "targetAbi": "10.11.0.0",
+   "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin",
+-  "imagePathLinux": "/var/lib/jellyfin/plugins/Tanados UI_2.8.1.0/icon.png",
+-  "imagePathWindows": "%ProgramData%/Jellyfin/Server/plugins/Tanados UI_2.8.1.0/icon.png",
+-  "timestamp": "2026-05-07T19:12:54Z",
++  "imagePathLinux": "/var/lib/jellyfin/plugins/Tanados UI_2.8.1.1/icon.png",
++  "imagePathWindows": "%ProgramData%/Jellyfin/Server/plugins/Tanados UI_2.8.1.1/icon.png",
++  "timestamp": "2026-05-08T14:42:22Z",
+   "guid": "c0b4a5e0-2f6a-4e70-9c5f-1e7c2d0b7f12"
+ }
+diff -ruN recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/scripts/package-tanados-ui.sh TanadosUI-fixed-settings-source-2.8.1.1/scripts/package-tanados-ui.sh
+--- recreate_tanados_current/TanadosUI-finished-source-2.8.1.0/scripts/package-tanados-ui.sh	2026-05-07 19:13:51.000000000 +0000
++++ TanadosUI-fixed-settings-source-2.8.1.1/scripts/package-tanados-ui.sh	2026-05-08 14:42:22.188450230 +0000
+@@ -1,7 +1,7 @@
+ #!/usr/bin/env bash
+ set -euo pipefail
+ 
+-VERSION="${1:-2.8.1.0}"
++VERSION="${1:-2.8.1.1}"
+ REPO_SLUG="${REPO_SLUG:-helldragonpz/TanadosUI-Plugin}"
+ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ DIST_DIR="$ROOT_DIR/dist"
+@@ -33,39 +33,40 @@
+ [ -f "$PUBLISH_DIR/Jellyfin.Plugin.TanadosUI.pdb" ] && cp "$PUBLISH_DIR/Jellyfin.Plugin.TanadosUI.pdb" "$PACKAGE_DIR/"
+ cp meta.json "$PACKAGE_DIR/"
+ cp img/icon.png "$PACKAGE_DIR/icon.png"
++[ -f img/tanados-logo.png ] && cp img/tanados-logo.png "$PACKAGE_DIR/tanados-logo.png"
+ 
+ (
+   cd "$DIST_DIR/package"
+   zip -qr "$ZIP_PATH" "Tanados UI_$VERSION"
+ )
+ 
+-if command -v sha256sum >/dev/null 2>&1; then
+-  SHA256="$(sha256sum "$ZIP_PATH" | awk '{print $1}')"
+-elif command -v shasum >/dev/null 2>&1; then
+-  SHA256="$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')"
++if command -v md5sum >/dev/null 2>&1; then
++  MD5="$(md5sum "$ZIP_PATH" | awk '{print $1}')"
++elif command -v md5 >/dev/null 2>&1; then
++  MD5="$(md5 -q "$ZIP_PATH")"
+ else
+-  echo "sha256sum/shasum was not found; cannot calculate checksum." >&2
++  echo "md5sum/md5 was not found; cannot calculate Jellyfin repository checksum." >&2
+   exit 1
+ fi
+ 
+-echo "$SHA256" > "$DIST_DIR/checksum-sha256.txt"
++printf '%s\n' "$MD5" > "$DIST_DIR/checksum-md5.txt"
+ 
+ python3 - <<PY
+ import json, datetime
+ from pathlib import Path
+ manifest_path = Path('manifest.json')
+-manifest = json.loads(manifest_path.read_text())
++manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+ version = '$VERSION'
+-sha256 = '$SHA256'
++md5 = '$MD5'
+ repo = '$REPO_SLUG'
+ release_url = f'https://github.com/{repo}/releases/download/{version}/TanadosUI-{version}-server.zip'
+ manifest[0]['versions'][0]['version'] = version
+ manifest[0]['versions'][0]['sourceUrl'] = release_url
+-manifest[0]['versions'][0]['checksum'] = sha256
++manifest[0]['versions'][0]['checksum'] = md5
+ manifest[0]['versions'][0]['timestamp'] = datetime.datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
+-manifest_path.write_text(json.dumps(manifest, indent=2) + '\n')
++manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+ PY
+ 
+ echo "Built: $ZIP_PATH"
+-echo "SHA256: $SHA256"
+-echo "manifest.json was updated with the checksum and release URL."
++echo "MD5: $MD5"
++echo "manifest.json was updated with the Jellyfin MD5 checksum and release URL."
