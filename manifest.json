@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
     "versions": [
       {
+        "version": "2.9.0.4",
+        "changelog": "v2.9.0.4\n\nHotfixes:\n- Fixed Sonarr and Radarr upcoming calendar posters so local Arr poster paths are proxied correctly and remote poster URLs fall back cleanly when needed\n- Fixed the missing Tanados sidebar regression by narrowing the glass-shell drawer styling to real navigation items instead of all links and buttons inside the drawer\n- Fixed audio language flags on cards and native details pages by reading media streams from both item payloads and media sources, retrying after auth warmup, and avoiding stale null caches\n- Updated browser smoke coverage to validate the current audio badge item shape alongside branding, runtime shell, upcoming, and recent-row checks\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.4/TanadosUI-2.9.0.4-server.zip",
+        "checksum": "7c33f9364b0ab1d8cafe86811d84a29d",
+        "timestamp": "2026-05-08T22:11:23Z"
+      },
+      {
         "version": "2.9.0.3",
         "changelog": "v2.9.0.3\n\nPolish and fixes:\n- Reworked the Tanados shell with a glass-style header and sidebar, upgraded drawer button styling, improved top navigation icons, and corrected sidebar logo branding\n- Added admin toggles for showing native Jellyfin home tabs and the Watchlist shortcut in the top navigation\n- Fixed settings scrolling, expanded the settings shell for desktop/mobile/TV layouts, and kept direct branding asset upload for header, login, favicon, and login background images\n- Added Sonarr and Radarr connection test buttons, improved upcoming release navigation injection, and kept older manifest versions instead of overwriting them\n- Fixed notification hover flicker, improved audio language badge injection, and restored hover trailer and trailer action reliability\n- Expanded browser smoke coverage for branding injection, runtime shell toggles, upcoming navigation, recent rows, and audio badges\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
         "targetAbi": "10.11.0.0",

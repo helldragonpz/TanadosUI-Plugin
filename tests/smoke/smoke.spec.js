@@ -28,7 +28,7 @@ const runtimeConfig = {
   audioFlagMaxCount: 2,
   preferredLang: "bg-BG",
   fallbackLang: "en-US",
-  version: "2.9.0.3"
+  version: "2.9.0.4"
 };
 
 const adminRuntimeConfig = {

@@ -3,13 +3,13 @@
   "description": "Tanados UI rebrands Jellyfin Web automatically with the Tanados logo/colors and adds the enhanced slider, home, playback, profile, and settings modules.",
   "name": "Tanados UI",
   "owner": "Tanados",
-  "version": "2.9.0.3",
+  "version": "2.9.0.4",
   "status": "Active",
   "autoUpdate": true,
   "targetAbi": "10.11.0.0",
   "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin",
-  "imagePathLinux": "/var/lib/jellyfin/plugins/Tanados UI_2.9.0.3/icon.png",
-  "imagePathWindows": "%ProgramData%/Jellyfin/Server/plugins/Tanados UI_2.9.0.3/icon.png",
-  "timestamp": "2026-05-08T20:44:05.6384014Z",
+  "imagePathLinux": "/var/lib/jellyfin/plugins/Tanados UI_2.9.0.4/icon.png",
+  "imagePathWindows": "%ProgramData%/Jellyfin/Server/plugins/Tanados UI_2.9.0.4/icon.png",
+  "timestamp": "2026-05-08T22:11:07.3297017Z",
   "guid": "c0b4a5e0-2f6a-4e70-9c5f-1e7c2d0b7f12"
 }
