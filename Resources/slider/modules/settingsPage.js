@@ -573,6 +573,10 @@ function prepareModalForLocalShell(modal) {
     closeBtn.onclick = () => closeLocalSettingsShell(modal);
   }
 
+  if (title) {
+    title.style.display = '';
+  }
+
   if (!modal.__overlayClickHandler) {
     modal.__overlayClickHandler = (event) => {
       if (event.target === modal) {
@@ -1280,7 +1284,7 @@ export function createSection(title) {
 
 export function createCheckbox(name, label, isChecked) {
   const container = document.createElement('div');
-  container.className = 'setting-item';
+  container.className = 'setting-item setting-item--checkbox';
 
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';

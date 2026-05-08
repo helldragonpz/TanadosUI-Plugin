@@ -38,8 +38,11 @@
 
 .settings-modal-content {
   position: relative;
-  width: min(1240px, 100%);
-  max-height: min(92vh, 1100px);
+  display: flex;
+  flex-direction: column;
+  width: min(1400px, calc(100vw - 24px));
+  min-height: min(82vh, 980px);
+  max-height: min(95vh, 1220px);
   overflow: hidden;
   border-radius: 28px;
   border: 1px solid var(--tanados-settings-border);
@@ -49,10 +52,12 @@
 }
 
 .jms-settings-page-shell .settings-modal-content {
-  max-height: none;
+  width: 100%;
+  min-height: min(86vh, 980px);
 }
 
 .settings-modal-content > h2 {
+  flex: 0 0 auto;
   margin: 0;
   padding: 24px 28px 18px;
   font-size: 1.55rem;
@@ -63,26 +68,54 @@
     linear-gradient(135deg, rgba(111, 67, 243, 0.22), rgba(47, 107, 255, 0.08));
 }
 
+.settings-modal-content > .setting-item,
+.settings-modal-content > .fsetting-item,
+.settings-modal-content > .description-text2 {
+  flex: 0 0 auto;
+  margin: 18px 28px 0;
+}
+
 .settings-modal form {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 290px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 0;
-  min-height: 640px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  align-items: stretch;
 }
 
 .settings-tabs {
+  grid-column: 1;
+  grid-row: 1 / span 2;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 18px;
-  overflow: auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  touch-action: pan-y;
   border-right: 1px solid var(--tanados-settings-border);
   background:
     linear-gradient(180deg, rgba(23, 14, 42, 0.92), rgba(14, 10, 27, 0.94));
 }
 
 .settings-tab-content {
-  overflow: auto;
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
   padding: 22px 24px 120px;
   background:
     radial-gradient(circle at top right, rgba(242, 198, 107, 0.05), transparent 20%),
@@ -101,7 +134,13 @@
   color: var(--tanados-settings-muted);
   font-weight: 700;
   text-align: left;
+  cursor: pointer;
   transition: transform 140ms ease, color 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+}
+
+.jmstab-label {
+  white-space: normal;
+  line-height: 1.35;
 }
 
 .settings-tab:hover,
@@ -149,6 +188,11 @@
 .pause-panel,
 .exporter-panel {
   display: block;
+  min-width: 0;
+}
+
+.settings-tab-content > * {
+  min-width: 0;
 }
 
 .settings-panel > h3,
@@ -207,10 +251,13 @@
   accent-color: var(--tanados-settings-accent);
 }
 
+.setting-item--checkbox,
+.fsetting-item--checkbox,
 .setting-item:has(input[type="checkbox"]),
 .fsetting-item:has(input[type="checkbox"]) {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   min-height: 42px;
   padding: 12px 14px;
@@ -219,6 +266,8 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.setting-item--checkbox > label,
+.fsetting-item--checkbox > label,
 .setting-item:has(input[type="checkbox"]) > label,
 .fsetting-item:has(input[type="checkbox"]) > label {
   margin: 0;
@@ -288,6 +337,8 @@
   bottom: 0;
   z-index: 3;
   grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -437,20 +488,127 @@
   word-break: break-word;
 }
 
+.tanados-branding-asset-field {
+  gap: 12px;
+}
+
+.tanados-branding-upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tanados-branding-upload-row > button {
+  flex: 0 0 auto;
+}
+
+.tanados-branding-file-input {
+  display: none;
+}
+
+.tanados-branding-preview {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.tanados-branding-preview-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: rgba(247, 243, 255, 0.62);
+}
+
+.tanados-branding-preview-box {
+  display: grid;
+  place-items: center;
+  min-height: 110px;
+  overflow: hidden;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(111, 67, 243, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(12, 8, 23, 0.94), rgba(8, 6, 16, 0.98));
+}
+
+.tanados-branding-preview-box--wide {
+  min-height: 180px;
+}
+
+.tanados-branding-preview-box--favicon {
+  min-height: 88px;
+}
+
+.tanados-branding-preview-box img {
+  display: block;
+  max-width: min(100%, 280px);
+  max-height: 148px;
+  object-fit: contain;
+}
+
+.tanados-branding-preview-box--wide img {
+  width: 100%;
+  max-width: none;
+  max-height: 100%;
+  min-height: 180px;
+  object-fit: cover;
+}
+
+.tanados-branding-preview-box--favicon img {
+  max-width: 48px;
+  max-height: 48px;
+}
+
+.tanados-branding-preview-empty {
+  color: rgba(247, 243, 255, 0.62);
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.tanados-branding-preview-meta,
+.tanados-branding-upload-status {
+  color: var(--tanados-settings-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.tanados-branding-upload-status[data-tone="error"] {
+  color: #f5a9ae;
+}
+
+.tanados-branding-upload-status[data-tone="success"] {
+  color: #d7c8ff;
+}
+
 @media (max-width: 980px) {
   .settings-modal form {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   .settings-tabs {
+    grid-column: 1;
+    grid-row: 1;
     flex-direction: row;
     overflow: auto hidden;
+    overflow-y: hidden;
     border-right: 0;
     border-bottom: 1px solid var(--tanados-settings-border);
   }
 
+  .settings-tab-content {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
   .btn-item {
     grid-column: 1;
+    grid-row: 3;
     justify-content: stretch;
     flex-wrap: wrap;
   }
@@ -466,9 +624,21 @@
     padding: 10px;
   }
 
+  .settings-modal-content {
+    width: min(100vw - 12px, 100%);
+    min-height: min(90vh, 980px);
+    max-height: min(100vh - 12px, 1220px);
+  }
+
   .settings-modal-content > h2 {
     padding: 18px 18px 16px;
     font-size: 1.25rem;
+  }
+
+  .settings-modal-content > .setting-item,
+  .settings-modal-content > .fsetting-item,
+  .settings-modal-content > .description-text2 {
+    margin-inline: 16px;
   }
 
   .settings-tab-content {
@@ -480,5 +650,57 @@
   .sub-options {
     padding: 14px;
     border-radius: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  .settings-tab {
+    min-height: 52px;
+  }
+
+  .settings-modal input[type="text"],
+  .settings-modal input[type="number"],
+  .settings-modal input[type="password"],
+  .settings-modal input[type="color"],
+  .settings-modal select,
+  .settings-modal textarea {
+    min-height: 50px;
+    font-size: 16px;
+  }
+
+  .btn-item button,
+  .theme-toggle-btn,
+  .settings-close,
+  .confirm-btn,
+  .cancel-btn,
+  .reset-button,
+  .position-modal-apply,
+  .position-modal-option,
+  .btn,
+  .btn-ok,
+  .btn-cancel,
+  .btn-stop,
+  .btn-toggle-log {
+    min-height: 48px;
+  }
+}
+
+@media (pointer: coarse) and (min-width: 1000px) {
+  .settings-modal-content {
+    width: min(1500px, calc(100vw - 32px));
+  }
+
+  .settings-modal form {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  .settings-tabs {
+    padding: 20px;
+    gap: 10px;
+  }
+
+  .settings-tab {
+    min-height: 56px;
+    font-size: 0.98rem;
   }
 }

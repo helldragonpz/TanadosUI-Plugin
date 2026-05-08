@@ -31,7 +31,7 @@ function createTextField(name, labelText, placeholder = "", type = "text") {
 
 function createCheckboxField(name, labelText) {
   const wrap = document.createElement("div");
-  wrap.className = "setting-item";
+  wrap.className = "setting-item setting-item--checkbox";
 
   const input = document.createElement("input");
   input.type = "checkbox";

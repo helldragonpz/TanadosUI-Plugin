@@ -16,7 +16,7 @@ export function createSection(title) {
 
 export function createCheckbox(name, label, isChecked) {
   const container = document.createElement("div");
-  container.className = "setting-item";
+  container.className = "setting-item setting-item--checkbox";
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";

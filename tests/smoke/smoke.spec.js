@@ -26,7 +26,7 @@ const runtimeConfig = {
   audioFlagMaxCount: 2,
   preferredLang: "bg-BG",
   fallbackLang: "en-US",
-  version: "2.9.0.1"
+  version: "2.9.0.2"
 };
 
 const adminRuntimeConfig = {
@@ -76,6 +76,59 @@ const upcomingFeed = {
       type: "Episode",
       releaseDateUtc: "2026-05-13T00:00:00Z",
       posterUrl: "/slider/src/images/tanados-favicon.png"
+    }
+  ]
+};
+
+const homeViews = {
+  Items: [
+    {
+      Id: "movies-lib-1",
+      Name: "Movies",
+      CollectionType: "movies"
+    },
+    {
+      Id: "tv-lib-1",
+      Name: "Series",
+      CollectionType: "tvshows"
+    }
+  ]
+};
+
+const recentMovieItems = {
+  Items: [
+    {
+      Id: "movie-1",
+      Name: "Smoke Movie One",
+      Type: "Movie",
+      ProductionYear: 2024,
+      RunTimeTicks: 72000000000,
+      OfficialRating: "PG-13",
+      CommunityRating: 8.2,
+      Genres: ["Action", "Sci-Fi"],
+      ImageTags: { Primary: "primary-1", Backdrop: "backdrop-1" }
+    },
+    {
+      Id: "movie-2",
+      Name: "Smoke Movie Two",
+      Type: "Movie",
+      ProductionYear: 2023,
+      RunTimeTicks: 69000000000,
+      OfficialRating: "PG",
+      CommunityRating: 7.6,
+      Genres: ["Adventure"],
+      ImageTags: { Primary: "primary-2", Backdrop: "backdrop-2" }
+    },
+    {
+      Id: "movie-3",
+      Name: "Smoke Movie Three",
+      Type: "Movie",
+      ProductionYear: 2022,
+      RunTimeTicks: 65000000000,
+      OfficialRating: "R",
+      CommunityRating: 7.1,
+      Genres: ["Thriller"],
+      ImageTags: { Primary: "primary-3", Backdrop: "backdrop-3" }
     }
   ]
 };
@@ -187,6 +240,43 @@ async function installApiRoutes(page, { isAdmin = true } = {}) {
   await stubJson(page, "**/Users/Me", createApiUser(isAdmin));
 }
 
+async function installRecentRowsRoutes(page) {
+  await stubJson(page, "**/Users/user-1/Views", homeViews);
+  await page.route("**/Users/user-1/Items?**", async (route) => {
+    const url = new URL(route.request().url());
+    const itemTypes = url.searchParams.get("IncludeItemTypes") || "";
+    const ids = (url.searchParams.get("Ids") || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (ids.length) {
+      const selected = recentMovieItems.Items.filter((item) => ids.includes(item.Id));
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify({ Items: selected })
+      });
+      return;
+    }
+
+    if (itemTypes === "Movie") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify(recentMovieItems)
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({ Items: [] })
+    });
+  });
+}
+
 function trackPageErrors(page) {
   const pageErrors = [];
   page.on("pageerror", (error) => {
@@ -228,6 +318,14 @@ test("settings wrapper mounts the embedded Tanados settings shell", async ({ pag
   await page.goto("/tests/smoke/fixtures/settings-shell.html");
 
   await page.evaluate(async () => {
+    await new Promise((resolve, reject) => {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "/slider/src/settings.css";
+      link.onload = () => resolve();
+      link.onerror = () => reject(new Error("Failed to load settings.css"));
+      document.head.appendChild(link);
+    });
     const mod = await import("/Plugins/TanadosUI/assets/WebSettingsJs");
     await mod.mountTanadosUISettingsPage(document.getElementById("host"), {
       defaultTab: "branding",
@@ -239,6 +337,11 @@ test("settings wrapper mounts the embedded Tanados settings shell", async ({ pag
   await expect(page.locator(".settings-tab[data-tab='branding']")).toBeVisible();
   await expect(page.locator(".settings-tab[data-tab='upcoming']")).toBeVisible();
   await expect(page.locator("#branding-panel")).toBeVisible();
+
+  const tabContentOverflow = await page.locator(".settings-tab-content").evaluate((el) => getComputedStyle(el).overflowY);
+  const tabsOverflow = await page.locator(".settings-tabs").evaluate((el) => getComputedStyle(el).overflowY);
+  expect(tabContentOverflow).toBe("auto");
+  expect(tabsOverflow).toBe("auto");
 
   expect(pageErrors).toEqual([]);
 });
@@ -261,6 +364,52 @@ test("upcoming calendar injects top-nav and home section on home views", async (
   await expect(page.locator(".mui-tabs-shell .TanadosUI-upcoming-nav-button")).toBeVisible();
   await expect(page.locator("#TanadosUI-upcoming-home-section")).toBeVisible();
   await expect(page.locator("#TanadosUI-upcoming-home-section .TanadosUIup-card")).toHaveCount(2);
+
+  expect(pageErrors).toEqual([]);
+});
+
+test("recent movie rows inject home library cards on home views", async ({ page }) => {
+  const pageErrors = trackPageErrors(page);
+  await installBrowserStubs(page);
+  await installApiRoutes(page);
+  await installRecentRowsRoutes(page);
+
+  await page.addInitScript(() => {
+    localStorage.setItem("enableHomeSectionsMaster", "true");
+    localStorage.setItem("enableRecentRows", "true");
+    localStorage.setItem("enableRecentMoviesRow", "true");
+    localStorage.setItem("enableRecentSeriesRow", "false");
+    localStorage.setItem("enableRecentEpisodesRow", "false");
+    localStorage.setItem("enableRecentMusicRow", "false");
+    localStorage.setItem("enableRecentMusicTracksRow", "false");
+    localStorage.setItem("enableContinueMovies", "false");
+    localStorage.setItem("enableContinueSeries", "false");
+    localStorage.setItem("enableNextUpRow", "false");
+    localStorage.setItem("enableTop10MoviesRow", "false");
+    localStorage.setItem("enableTop10SeriesRow", "false");
+    localStorage.setItem("enableTmdbTopMoviesRow", "false");
+    localStorage.setItem("showRecentRowsHeroCards", "false");
+    localStorage.setItem("showRecentMoviesHeroCards", "false");
+    localStorage.setItem("recentRowsSplitMovieLibs", "false");
+    localStorage.setItem("currentUserId", "user-1");
+  });
+
+  await page.goto("/tests/smoke/fixtures/injection-shell.html");
+  await page.evaluate(() => {
+    window.location.hash = "#/home?tab=0";
+  });
+
+  await page.evaluate(async () => {
+    const mod = await import("/slider/modules/recentRows.js");
+    await mod.mountRecentRowsLazy({ force: true });
+  });
+
+  const section = page.locator('[id^="recent-rows--"]');
+  await expect(section).toHaveCount(1);
+  await expect(section.locator(".personal-recs-card")).toHaveCount(3);
+  await expect(section.locator('[data-item-id="movie-1"]')).toBeVisible();
+  await expect(section.locator('[data-item-id="movie-2"]')).toBeVisible();
+  await expect(section.locator('[data-item-id="movie-3"]')).toBeVisible();
 
   expect(pageErrors).toEqual([]);
 });
