@@ -1,0 +1,11 @@
+{
+  "name": "tanados-ui-plugin",
+  "private": true,
+  "scripts": {
+    "test:smoke": "playwright test tests/smoke/smoke.spec.js",
+    "test:smoke:headed": "playwright test tests/smoke/smoke.spec.js --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2"
+  }
+}

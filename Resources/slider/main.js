@@ -28,6 +28,8 @@ import { initUserProfileAvatarPicker } from "./modules/avatarPicker.js";
 import { startBackgroundCollectionIndexer, getBackgroundCollectionIndexerStatus } from "./modules/collectionIndexer.js";
 import { initProfileChooser, syncProfileChooserHeaderButtonVisibility } from "./modules/profileChooser.js";
 import { waitForNativeHomeSectionStability, waitForVisibleHomeSections } from "./modules/homeSectionNative.js";
+import "./modules/upcomingCalendar.js";
+import "./modules/audioLanguageBadges.js";
 export { loadCSS } from "./modules/playerStyles.js";
 export { waitForAnyVisible };
 const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 0));
@@ -619,7 +621,7 @@ function syncCustomSplashProgress(patch = {}) {
   if (state.uiReady) {
     progress = 1;
     stage = splashLabel("customSplashStageReady", "HAZIR");
-    detail = splashLabel("customSplashDetailReady", "TanadosUI çevrimiçi");
+    detail = splashLabel("customSplashDetailReady", "Tanados UI çevrimiçi");
   }
 
   return setCustomSplashProgress(progress, {
@@ -696,6 +698,12 @@ function getCustomSplashGreetingFallback(lang = "tur", part = "Morning") {
       Afternoon: "Добрый день",
       Evening: "Добрый вечер",
       Night: "Здравствуйте"
+    },
+    bul: {
+      Morning: "Добро утро",
+      Afternoon: "Добър ден",
+      Evening: "Добър вечер",
+      Night: "Здравейте"
     }
   };
 
@@ -730,7 +738,7 @@ function getCurrentCustomSplashUserName() {
 }
 
 function getCustomSplashLoadingFallback(title) {
-  const safeTitle = String(title || "TanadosUI").trim() || "TanadosUI";
+  const safeTitle = String(title || "Tanados UI").trim() || "Tanados UI";
   const lang = (typeof getDefaultLanguage === "function" ? getDefaultLanguage() : null) || "eng";
 
   switch (lang) {
@@ -771,7 +779,7 @@ function buildCustomSplashCaption(title, labels = {}) {
 }
 
 function buildCustomSplashDisplayTitle(title, labels = {}, lang = "tur") {
-  const safeTitle = splashTextValue(title, "TanadosUI");
+  const safeTitle = splashTextValue(title, "Tanados UI");
   const userName = getCurrentCustomSplashUserName();
   if (!userName) return safeTitle;
 

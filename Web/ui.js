@@ -33,14 +33,14 @@
       heroLangLabel: "Selected Language",
       heroRootLabel: "Web UI Root",
       tabs: {
-        TanadosUI: "TanadosUI",
+        TanadosUI: "Tanados UI",
         TanadosUISettings: "Tanados UI Settings",
         status: "Status",
         snippet: "HTML Snippet & Web Path & Permissions"
       },
       sections: {
         configTitle: "Core Settings",
-        configBody: "Choose where TanadosUI serves slider assets from and how the player module path is resolved.",
+        configBody: "Choose where Tanados UI serves slider assets from and how the player module path is resolved.",
         adminTitle: "Admin Actions",
         adminBody: "Save plugin settings or publish the current admin snapshot globally for every user profile.",
         statusTitle: "Runtime Status",
@@ -49,7 +49,7 @@
         inMemoryBody: "Checks whether index.html is being rewritten at response time without touching files on disk.",
         TanadosUISettingsTitle: "Tanados UI Settings",
         snippetTitle: "HTML Snippet",
-        snippetBody: "The exact snippet TanadosUI injects into Jellyfin web.",
+        snippetBody: "The exact snippet Tanados UI injects into Jellyfin web.",
         envTitle: "Web Path & Permissions",
         envBody: "Detected web root, file write permissions, and suggested ACL commands for patching."
       },
@@ -105,7 +105,7 @@
         inactiveTitle: "In-memory injection was not detected.",
         inactiveHint: "Use Patch if you want to persist the snippet into index.html.",
         fallbackToggleLabel: "Enable physical index.html patch fallback",
-        fallbackToggleHint: "Disabled by default. Enable this only if runtime injection does not work or if you explicitly need disk patching. When enabled, TanadosUI will try to patch index.html during startup and configuration changes."
+        fallbackToggleHint: "Disabled by default. Enable this only if runtime injection does not work or if you explicitly need disk patching. When enabled, Tanados UI will try to patch index.html during startup and configuration changes."
       },
       env: {
         runningUser: "Running user",
@@ -168,6 +168,7 @@
 
   function getLanguageDisplayName(code) {
     const map = {
+      bul: "Bulgarian",
       tur: "Turkce",
       eng: "English",
       deu: "Deutsch",
@@ -345,13 +346,13 @@
     setText(view, "#heroRootLabel", t("webConfig.heroRootLabel", "Web UI Root"));
     setText(view, "#heroRootValue", webRootLabel());
 
-    setText(view, "#tabTanadosUI", t("webConfig.tabs.TanadosUI", "TanadosUI"));
+    setText(view, "#tabTanadosUI", t("webConfig.tabs.TanadosUI", "Tanados UI"));
     setText(view, "#tabTanadosUISettings", t("webConfig.tabs.TanadosUISettings", "Tanados UI Settings"));
     setText(view, "#tabStatus", t("webConfig.tabs.status", "Status"));
     setText(view, "#tabSnippet", t("webConfig.tabs.snippet", "HTML Snippet & Web Path & Permissions"));
 
     setText(view, "#configCardTitle", t("webConfig.sections.configTitle", "Core Settings"));
-    setText(view, "#configCardBody", t("webConfig.sections.configBody", "Choose where TanadosUI serves slider assets from and how the player module path is resolved."));
+    setText(view, "#configCardBody", t("webConfig.sections.configBody", "Choose where Tanados UI serves slider assets from and how the player module path is resolved."));
     setText(view, "#actionsCardTitle", t("webConfig.sections.adminTitle", "Admin Actions"));
     setText(view, "#actionsCardBody", t("webConfig.sections.adminBody", "Save plugin settings or publish the current admin snapshot globally for every user profile."));
     setText(view, "#TanadosUISettingsCardTitle", t("webConfig.sections.TanadosUISettingsTitle", "Tanados UI Settings"));
@@ -360,7 +361,7 @@
     setText(view, "#inmemCardTitle", t("webConfig.sections.inMemoryTitle", "In-Memory Injection"));
     setText(view, "#inmemCardBody", t("webConfig.sections.inMemoryBody", "Checks whether index.html is being rewritten at response time without touching files on disk."));
     setText(view, "#snippetCardTitle", t("webConfig.sections.snippetTitle", "HTML Snippet"));
-    setText(view, "#snippetCardBody", t("webConfig.sections.snippetBody", "The exact snippet TanadosUI injects into Jellyfin web."));
+    setText(view, "#snippetCardBody", t("webConfig.sections.snippetBody", "The exact snippet Tanados UI injects into Jellyfin web."));
     setText(view, "#envCardTitle", t("webConfig.sections.envTitle", "Web Path & Permissions"));
     setText(view, "#envCardBody", t("webConfig.sections.envBody", "Detected web root, file write permissions, and suggested ACL commands for patching."));
 
@@ -595,7 +596,7 @@
           <input id="physicalPatchFallbackToggle" type="checkbox" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}>
           <span>${esc(t("webConfig.inMemory.fallbackToggleLabel", "Enable physical index.html patch fallback"))}</span>
         </label>
-        <div class="fieldDescription">${esc(t("webConfig.inMemory.fallbackToggleHint", "Disabled by default. Enable this only if runtime injection does not work or if you explicitly need disk patching. When enabled, TanadosUI will try to patch index.html during startup and configuration changes."))}</div>
+        <div class="fieldDescription">${esc(t("webConfig.inMemory.fallbackToggleHint", "Disabled by default. Enable this only if runtime injection does not work or if you explicitly need disk patching. When enabled, Tanados UI will try to patch index.html during startup and configuration changes."))}</div>
       </div>
     `;
   }

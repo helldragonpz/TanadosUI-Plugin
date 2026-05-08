@@ -1728,7 +1728,7 @@ public sealed class TrailerAutomationService
         }
     }
 
-    private static async Task EnsureBackdropsThemeAsync(
+    private static Task EnsureBackdropsThemeAsync(
         string dir,
         string trailerPath,
         StepLogger log,
@@ -1746,12 +1746,12 @@ public sealed class TrailerAutomationService
         catch
         {
             log.Out($"[WARN] backdrops klasörü oluşturulamadı: {backdropsDir}");
-            return;
+            return Task.CompletedTask;
         }
 
         if (File.Exists(themePath))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var relativeTarget = Path.GetRelativePath(backdropsDir, trailerPath);
@@ -1771,7 +1771,7 @@ public sealed class TrailerAutomationService
                 else
                 {
                     log.Out("[WARN] Symlink/hardlink oluşturulamadı, theme.mp4 atlanıyor (mode=symlink).");
-                    return;
+                    return Task.CompletedTask;
                 }
                 break;
             case "hardlink":
@@ -1786,7 +1786,7 @@ public sealed class TrailerAutomationService
                 else
                 {
                     log.Out("[WARN] Hardlink/symlink oluşturulamadı, theme.mp4 atlanıyor (mode=hardlink).");
-                    return;
+                    return Task.CompletedTask;
                 }
                 break;
             default:
@@ -1798,12 +1798,13 @@ public sealed class TrailerAutomationService
                 catch
                 {
                     log.Out($"[WARN] copy mode: theme.mp4 kopyalanamadı: {themePath}");
-                    return;
+                    return Task.CompletedTask;
                 }
                 break;
         }
 
         log.Out($"[OK] backdrops/theme.mp4 hazırlandı → {themePath}");
+        return Task.CompletedTask;
     }
 
     private static bool TryCreateSymbolicLink(string linkPath, string targetPath)

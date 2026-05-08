@@ -4,6 +4,8 @@ import { fetchItemDetails } from "../../Plugins/TanadosUI/runtime/api.js";
 import { calculateMatchPercentage } from "./hoverTrailerModal.js";
 import { withServer } from "./jfUrl.js";
 import { getTomatoIconHtml } from "./customIcons.js";
+import { createAudioLanguageBadges } from "./audioLanguageUtils.js";
+import { getRuntimeConfigSnapshot } from "./runtimeConfig.js";
 
 const config = getConfig();
 const QUALITY_SVG_BY_LEVEL = {
@@ -597,6 +599,49 @@ export function createLanguageContainer({ config, MediaStreams, itemType }) {
     MediaStreams.length === 0 ||
     String(itemType || "").toLowerCase() === "series"
   ) {
+    return container;
+  }
+
+  const runtime = getRuntimeConfigSnapshot();
+  const audioFlagLimit = Math.max(1, Number(runtime?.audioFlagMaxCount) || 2);
+  const audioBadges = runtime?.enableAudioFlagsOnCards !== false
+    ? createAudioLanguageBadges(MediaStreams, { maxCount: audioFlagLimit })
+    : [];
+
+  if (audioBadges.length) {
+    const badgesRow = document.createElement("div");
+    badgesRow.className = "TanadosUI-audio-flag-row";
+    badgesRow.style.cssText = [
+      "display:flex",
+      "flex-wrap:wrap",
+      "gap:6px",
+      "align-items:center"
+    ].join(";");
+
+    audioBadges.forEach((badge) => {
+      const chip = document.createElement("span");
+      chip.className = "TanadosUI-audio-flag-badge";
+      chip.textContent = badge.text;
+      chip.title = badge.label || badge.code;
+      chip.style.cssText = [
+        "display:inline-flex",
+        "align-items:center",
+        "justify-content:center",
+        "min-height:24px",
+        "padding:2px 8px",
+        "border-radius:999px",
+        "background:rgba(8,10,18,.68)",
+        "border:1px solid rgba(242,198,107,.24)",
+        "backdrop-filter:blur(8px)",
+        "color:#f7f4ff",
+        "font-size:.78rem",
+        "font-weight:700",
+        "letter-spacing:.02em"
+      ].join(";");
+      badgesRow.appendChild(chip);
+    });
+
+    container.appendChild(badgesRow);
     return container;
   }
 

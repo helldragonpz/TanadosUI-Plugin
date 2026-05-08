@@ -7,6 +7,24 @@ import { languageLabels as spaLabels } from './spa.js';
 import { languageLabels as bulLabels } from './bul.js';
 
 export const AUTO_LANGUAGE_CHANGE_EVENT = 'jms:auto-language-changed';
+const LANGUAGE_LABELS_MAP = Object.freeze({
+  tur: turLabels,
+  eng: engLabels,
+  deu: deuLabels,
+  fre: fraLabels,
+  rus: rusLabels,
+  spa: spaLabels,
+  bul: bulLabels
+});
+const LANGUAGE_DATE_LOCALES = Object.freeze({
+  tur: 'tr-TR',
+  eng: 'en-US',
+  deu: 'de-DE',
+  fre: 'fr-FR',
+  rus: 'ru-RU',
+  spa: 'es-ES',
+  bul: 'bg-BG'
+});
 
 let __autoLanguageSyncStarted = false;
 let __autoLanguageReloadOnChange = false;
@@ -36,17 +54,16 @@ export function getLanguageLabels(lang) {
   const effective = normalizeLanguageCode(
     lang || getEffectiveLanguage?.() || detectBrowserLanguage?.() || 'eng'
   );
+  const selected = LANGUAGE_LABELS_MAP[effective] || engLabels;
+  if (selected === engLabels) return engLabels;
+  return { ...engLabels, ...selected };
+}
 
-  switch (effective) {
-    case 'eng': return engLabels;
-    case 'deu': return deuLabels;
-    case 'fre': return fraLabels;
-    case 'rus': return rusLabels;
-    case 'spa': return spaLabels;
-    case 'tur': return turLabels;
-    case 'bul': return bulLabels;
-    default:    return engLabels;
-  }
+export function getDefaultDateLocaleForLanguage(lang) {
+  const effective = normalizeLanguageCode(
+    lang || getEffectiveLanguage?.() || detectBrowserLanguage?.() || 'eng'
+  );
+  return LANGUAGE_DATE_LOCALES[effective] || 'en-US';
 }
 
 export function detectBrowserLanguage() {

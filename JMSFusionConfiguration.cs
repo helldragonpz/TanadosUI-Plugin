@@ -151,6 +151,72 @@ namespace Jellyfin.Plugin.TanadosUI
 
         [JsonPropertyName("allowSharedCastViewerForUsers")]
         public bool AllowSharedCastViewerForUsers { get; set; } = false;
+
+        [JsonPropertyName("appDisplayName")]
+        public string AppDisplayName { get; set; } = "Tanados UI";
+
+        [JsonPropertyName("headerLogoUrl")]
+        public string HeaderLogoUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("loginLogoUrl")]
+        public string LoginLogoUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("faviconUrl")]
+        public string FaviconUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("loginBackgroundUrl")]
+        public string LoginBackgroundUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("primaryColor")]
+        public string PrimaryColor { get; set; } = "#6f43f3";
+
+        [JsonPropertyName("secondaryColor")]
+        public string SecondaryColor { get; set; } = "#2f6bff";
+
+        [JsonPropertyName("accentColor")]
+        public string AccentColor { get; set; } = "#f2c66b";
+
+        [JsonPropertyName("showHeaderLogo")]
+        public bool ShowHeaderLogo { get; set; } = true;
+
+        [JsonPropertyName("useCompactHeaderLogo")]
+        public bool UseCompactHeaderLogo { get; set; } = false;
+
+        [JsonPropertyName("enableSonarrIntegration")]
+        public bool EnableSonarrIntegration { get; set; } = false;
+
+        [JsonPropertyName("sonarrUrl")]
+        public string SonarrUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("sonarrApiKey")]
+        public string SonarrApiKey { get; set; } = string.Empty;
+
+        [JsonPropertyName("enableRadarrIntegration")]
+        public bool EnableRadarrIntegration { get; set; } = false;
+
+        [JsonPropertyName("radarrUrl")]
+        public string RadarrUrl { get; set; } = string.Empty;
+
+        [JsonPropertyName("radarrApiKey")]
+        public string RadarrApiKey { get; set; } = string.Empty;
+
+        [JsonPropertyName("upcomingDays")]
+        public int UpcomingDays { get; set; } = 14;
+
+        [JsonPropertyName("showUpcomingOnHome")]
+        public bool ShowUpcomingOnHome { get; set; } = true;
+
+        [JsonPropertyName("showUpcomingInTopNav")]
+        public bool ShowUpcomingInTopNav { get; set; } = true;
+
+        [JsonPropertyName("enableAudioFlagsOnCards")]
+        public bool EnableAudioFlagsOnCards { get; set; } = true;
+
+        [JsonPropertyName("enableAudioFlagsOnDetails")]
+        public bool EnableAudioFlagsOnDetails { get; set; } = true;
+
+        [JsonPropertyName("audioFlagMaxCount")]
+        public int AudioFlagMaxCount { get; set; } = 2;
     }
 
     public class SharedRadioStationEntry

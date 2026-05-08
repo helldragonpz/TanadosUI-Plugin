@@ -544,6 +544,7 @@ export function createMusicPanel(config, labels) {
     dateLocaleSelect.name = 'dateLocale';
 
     const locales = [
+    { value: 'bg-BG', label: '🇧🇬 Български' },
     { value: 'tr-TR', label: '🇹🇷 Türkçe' },
     { value: 'en-US', label: '🇺🇸 English (US)' },
     { value: 'en-GB', label: '🇬🇧 English (UK)' },

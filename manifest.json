@@ -9,12 +9,12 @@
     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
     "versions": [
       {
-        "version": "2.8.1.1",
-        "changelog": "v2.8.1.1\n\nFixes:\n- Fixed Tanados UI Settings failing to load because settingsPage.js could indirectly request a missing Bulgarian language module: /slider/language/bul_bg.js\n- Added bul_bg.js as a compatibility alias and switched the language index to the existing bul.js module\n- Set the default preferred trailer language to bg-BG\n- Updated build packaging to write Jellyfin's expected MD5 checksum into manifest.json\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Perform a hard browser refresh (Ctrl + F5) after updating\n- If the old settings error remains, clear browser cache for the Jellyfin server address",
+        "version": "2.9.0.1",
+        "changelog": "v2.9.0.1\n\nHotfixes:\n- Added lightweight browser smoke coverage for login branding, embedded settings mount, and upcoming home/top-nav injection\n- Cleaned up the TrailerAutomationService async warning so release builds complete without the previous CS1998 warning\n- Preserved the Tanados UI 2.9.0.0 rebrand, localization, calendar, branding, and audio badge changes in the packaged release\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
         "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.8.1.1/TanadosUI-2.8.1.1-server.zip",
-        "checksum": "6FF89273919413F04832E6E162288494",
-        "timestamp": "2026-05-08T15:36:39.4566476Z"
+        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.1/TanadosUI-2.9.0.1-server.zip",
+        "checksum": "dd26ff86d1abb8ae7c0229a68fea31b0",
+        "timestamp": "2026-05-08T17:44:52Z"
       }
     ]
   }

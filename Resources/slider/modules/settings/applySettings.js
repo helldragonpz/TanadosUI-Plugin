@@ -8,6 +8,8 @@ import { showNotification } from "../player/ui/notification.js";
 import { updateJmsPluginConfig } from "../jmsPluginConfig.js";
 import { closeDetailsModalIfLoaded } from "../detailsModalLoader.js";
 import { saveStudioHubVisibility } from "../studioHubsShared.js";
+import { getDefaultDateLocaleForLanguage } from "../../language/index.js";
+import { updateRuntimeConfigAdmin } from "../runtimeConfig.js";
 
 const _intOr = (v, def) => {
   const n = parseInt(v, 10);
@@ -348,7 +350,7 @@ const USER_ONLY_KEYS = [
             playerTheme: formData.get('playerTheme'),
             playerStyle: formData.get('playerStyle'),
             defaultLanguage: formData.get('defaultLanguage'),
-            dateLocale: formData.get('dateLocale') || 'tr-TR',
+            dateLocale: formData.get('dateLocale') || getDefaultDateLocaleForLanguage(formData.get('defaultLanguage') || config.defaultLanguage),
             sliderDuration: parseInt(formData.get('sliderDuration'), 10),
             limit: parseInt(formData.get('limit'), 10),
             onlyUnwatchedRandom: formData.get('onlyUnwatchedRandom') === 'on',
@@ -968,6 +970,58 @@ const USER_ONLY_KEYS = [
             ? pick(updatedConfig, USER_ONLY_KEYS)
             : updatedConfig;
 
+        const hasRuntimeConfigFields = [
+          'AppDisplayName',
+          'HeaderLogoUrl',
+          'LoginLogoUrl',
+          'FaviconUrl',
+          'LoginBackgroundUrl',
+          'PrimaryColor',
+          'SecondaryColor',
+          'AccentColor',
+          'ShowHeaderLogo',
+          'UseCompactHeaderLogo',
+          'EnableSonarrIntegration',
+          'SonarrUrl',
+          'SonarrApiKey',
+          'EnableRadarrIntegration',
+          'RadarrUrl',
+          'RadarrApiKey',
+          'UpcomingDays',
+          'ShowUpcomingOnHome',
+          'ShowUpcomingInTopNav',
+          'EnableAudioFlagsOnCards',
+          'EnableAudioFlagsOnDetails',
+          'AudioFlagMaxCount'
+        ].some((name) => hasNamedControl(name));
+
+        const runtimeConfigPatch = hasRuntimeConfigFields
+          ? {
+              AppDisplayName: String(formData.get('AppDisplayName') || '').trim(),
+              HeaderLogoUrl: String(formData.get('HeaderLogoUrl') || '').trim(),
+              LoginLogoUrl: String(formData.get('LoginLogoUrl') || '').trim(),
+              FaviconUrl: String(formData.get('FaviconUrl') || '').trim(),
+              LoginBackgroundUrl: String(formData.get('LoginBackgroundUrl') || '').trim(),
+              PrimaryColor: String(formData.get('PrimaryColor') || '').trim(),
+              SecondaryColor: String(formData.get('SecondaryColor') || '').trim(),
+              AccentColor: String(formData.get('AccentColor') || '').trim(),
+              ShowHeaderLogo: boolFromFd('ShowHeaderLogo', true),
+              UseCompactHeaderLogo: boolFromFd('UseCompactHeaderLogo', false),
+              EnableSonarrIntegration: boolFromFd('EnableSonarrIntegration', false),
+              SonarrUrl: String(formData.get('SonarrUrl') || '').trim(),
+              SonarrApiKey: String(formData.get('SonarrApiKey') || '').trim(),
+              EnableRadarrIntegration: boolFromFd('EnableRadarrIntegration', false),
+              RadarrUrl: String(formData.get('RadarrUrl') || '').trim(),
+              RadarrApiKey: String(formData.get('RadarrApiKey') || '').trim(),
+              UpcomingDays: Math.max(1, Math.min(90, _intOr(formData.get('UpcomingDays'), 14))),
+              ShowUpcomingOnHome: boolFromFd('ShowUpcomingOnHome', true),
+              ShowUpcomingInTopNav: boolFromFd('ShowUpcomingInTopNav', true),
+              EnableAudioFlagsOnCards: boolFromFd('EnableAudioFlagsOnCards', true),
+              EnableAudioFlagsOnDetails: boolFromFd('EnableAudioFlagsOnDetails', true),
+              AudioFlagMaxCount: Math.max(1, Math.min(6, _intOr(formData.get('AudioFlagMaxCount'), 2)))
+            }
+          : null;
+
         const hasTmdbApiKeyField = formData.has('TmdbApiKey');
         const tmdbApiKey = String(formData.get('TmdbApiKey') || '').trim();
 
@@ -996,6 +1050,9 @@ const USER_ONLY_KEYS = [
 
         if (isAdmin && hasTmdbApiKeyField) {
           await updateJmsPluginConfig({ TmdbApiKey: tmdbApiKey });
+        }
+        if (isAdmin && runtimeConfigPatch) {
+          await updateRuntimeConfigAdmin(runtimeConfigPatch);
         }
         try {
           const watchlistModule = await import("../watchlist.js");

@@ -24,6 +24,8 @@ import { createWatchlistPanel } from './settings/watchlistPage.js';
 import { createParentalPinPanel } from './settings/parentalPinPage.js';
 import { createDbManagementPanel } from './settings/dbManagementPage.js';
 import { createDetailsModalPanel } from './settings/detailsModalPage.js';
+import { createBrandingPanel } from './settings/brandingPage.js';
+import { createUpcomingPanel } from './settings/upcomingPage.js';
 import { enhanceFormAccessibility } from './accessibility.js';
 
 export { isLocalStorageAvailable, updateConfig };
@@ -50,7 +52,7 @@ export function createSettingsModal() {
     const config = getConfig();
     const currentLang = config.defaultLanguage || getDefaultLanguage();
     const labels = getLanguageLabels(currentLang) || {};
-    const TanadosUITabLabel = labels.sliderSettings || 'TanadosUI Ayarları';
+    const TanadosUITabLabel = labels.sliderSettings || 'Tanados UI Settings';
     const sliderTabLabel = labels.sliderPageLabel || 'Slider Ayarları';
 
     const modal = document.createElement('div');
@@ -151,6 +153,12 @@ export function createSettingsModal() {
     const profileChooserTab = createTab('profile-chooser', 'fa-user-group', labels.profileChooserHeader || 'Kim İzliyor Ayarları');
     const pauseTab = createTab('pause', 'fa-pause', labels.pauseSettings || 'Duraklatma Ekranı Ayarları');
     const watchlistSettingsTab = createTab('watchlist-settings', 'fa-bookmark', labels.watchlistSettingsTab || 'İzleme Listesi Ayarları');
+    const brandingTab = config?.currentUserIsAdmin
+      ? createTab('branding', 'fa-wand-magic-sparkles', labels.brandingSettingsTab || 'Tanados UI Branding')
+      : null;
+    const upcomingTab = config?.currentUserIsAdmin
+      ? createTab('upcoming', 'fa-calendar-days', labels.calendarSettingsTab || 'Upcoming Calendar')
+      : null;
     const hoverTab = createTab('hover', 'fa-play-circle', labels.hoverTrailer || 'HoverTrailer Ayarları');
     const trailersTab = createTab('trailers', 'fa-video', labels.trailersHeader || 'Fragman İndirme / NFO Ayarları');
     const notificationsTab = createTab('notifications', 'fa-bell', labels.notificationsSettings || 'Bildirim Ayarları');
@@ -166,7 +174,7 @@ export function createSettingsModal() {
 
     const tabs = [
         mainTab, sliderTab, queryTab, musicTab, studioTab, profileChooserTab,
-        pauseTab, watchlistSettingsTab, hoverTab, trailersTab, notificationsTab, detailsModalTab,
+        pauseTab, watchlistSettingsTab, brandingTab, upcomingTab, hoverTab, trailersTab, notificationsTab, detailsModalTab,
         avatarTab, parentalPinTab, positionTab, dbManagementTab, exporterTab, aboutTab
     ].filter(Boolean);
     tabContainer.append(...tabs);
@@ -196,6 +204,8 @@ export function createSettingsModal() {
     const notificationsPanel = createNotificationsPanel(config, labels);
     const detailsModalPanel = createDetailsModalPanel(config, labels);
     const watchlistSettingsPanel = createWatchlistPanel(config, labels);
+    const brandingPanel = config?.currentUserIsAdmin ? createBrandingPanel(config, labels) : null;
+    const upcomingPanel = config?.currentUserIsAdmin ? createUpcomingPanel(config, labels) : null;
     const dbManagementPanel = createDbManagementPanel(config, labels);
     const parentalPinPanel = config?.currentUserIsAdmin
       ? createParentalPinPanel(config, labels)
@@ -229,7 +239,7 @@ export function createSettingsModal() {
 
     [
         mainPanel, sliderPanel, queryPanel, musicPanel, studioPanel, profileChooserPanel,
-        pausePanel, watchlistSettingsPanel, hoverPanel, trailersPanel, notificationsPanel, detailsModalPanel,
+        pausePanel, watchlistSettingsPanel, brandingPanel, upcomingPanel, hoverPanel, trailersPanel, notificationsPanel, detailsModalPanel,
         avatarPanel, parentalPinPanel, positionPanel, dbManagementPanel, exporterPanel, aboutPanel
     ].filter(Boolean).forEach(panel => {
         panel.style.display = 'none';
@@ -238,14 +248,14 @@ export function createSettingsModal() {
 
     const panels = [
         mainPanel, sliderPanel, queryPanel, musicPanel, studioPanel, profileChooserPanel,
-        pausePanel, watchlistSettingsPanel, hoverPanel, trailersPanel, notificationsPanel, detailsModalPanel,
+        pausePanel, watchlistSettingsPanel, brandingPanel, upcomingPanel, hoverPanel, trailersPanel, notificationsPanel, detailsModalPanel,
         avatarPanel, parentalPinPanel, positionPanel, dbManagementPanel, exporterPanel, aboutPanel
     ].filter(Boolean);
     tabContent.append(...panels);
 
     const interactiveTabs = [
         mainTab, sliderTab, queryTab, musicTab, studioTab, profileChooserTab,
-        pauseTab, watchlistSettingsTab, hoverTab, trailersTab, notificationsTab, detailsModalTab,
+        pauseTab, watchlistSettingsTab, brandingTab, upcomingTab, hoverTab, trailersTab, notificationsTab, detailsModalTab,
         avatarTab, parentalPinTab, positionTab, dbManagementTab, exporterTab, aboutTab
     ].filter(Boolean);
     interactiveTabs.forEach(tab => {

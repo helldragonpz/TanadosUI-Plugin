@@ -1,5 +1,9 @@
 import { createCheckbox, createImageTypeSelect, bindCheckboxKontrol, bindTersCheckboxKontrol } from "./shared.js";
-import { getDefaultLanguage, getStoredLanguagePreference } from '../../language/index.js';
+import {
+  getDefaultDateLocaleForLanguage,
+  getDefaultLanguage,
+  getStoredLanguagePreference
+} from '../../language/index.js';
 import { fetchJmsPluginConfig, sanitizeTmdbApiKey } from "../jmsPluginConfig.js";
 
 const LS_TMDB_LANG  = 'jms_tmdb_reviews_lang';
@@ -61,6 +65,7 @@ export function createSliderPanel(config, labels) {
   const languages = [
     { value: 'auto', label: labels.optionAuto || '🌐 Otomatik (Tarayıcı dili)' },
     { value: 'tur',  label: labels.optionTurkish || '🇹🇷 Türkçe' },
+    { value: 'bul',  label: labels.optionBulgarian || '🇧🇬 Български' },
     { value: 'eng',  label: labels.optionEnglish || '🇬🇧 English' },
     { value: 'spa',  label: labels.optionEspanol || '🇪🇸 Español' },
     { value: 'deu',  label: labels.optionGerman  || '🇩🇪 Deutsch' },
@@ -130,8 +135,9 @@ export function createSliderPanel(config, labels) {
   const tmdbLangSelect = createSelectSimple(
     'tmdbReviewsLang',
     labels.tmdbReviewsLang || 'Yorum Dili',
-    lsGet(LS_TMDB_LANG, 'tr-TR'),
+    lsGet(LS_TMDB_LANG, getDefaultDateLocaleForLanguage(selectedLanguage === 'auto' ? effective : selectedLanguage)),
     [
+      { value: 'bg-BG', label: '🇧🇬 Български (bg-BG)' },
       { value: 'tr-TR', label: '🇹🇷 Türkçe (tr-TR)' },
       { value: 'en-US', label: '🇺🇸 English (en-US)' },
       { value: 'es-ES', label: '🇪🇸 Español (es-ES)' },

@@ -1,168 +1,298 @@
-const BRAND_NAME = "Tanados UI";
-const LOGO_URL = new URL("../src/images/tanados-logo.png", import.meta.url).href;
-const FAVICON_URL = new URL("../src/images/tanados-favicon.png", import.meta.url).href;
+import {
+  fetchRuntimeConfig,
+  getDefaultRuntimeConfig,
+  getRuntimeConfigSnapshot,
+  subscribeRuntimeConfig
+} from "./runtimeConfig.js";
+
+const DEFAULTS = getDefaultRuntimeConfig();
 const ROOT_ATTR = "data-tanados-ui-brand";
+const OLD_BRAND_RE = /\b(?:jellyfin|jmsfusion|monwui|tanadosui)\b/ig;
+const OLD_BRAND_TEST_RE = /\b(?:jellyfin|jmsfusion|monwui|tanadosui)\b/i;
+const LOCAL_HEADER_LOGO_URL = new URL("../src/images/tanados-logo.png", import.meta.url).href;
+const LOCAL_LOGIN_LOGO_URL = new URL("../src/images/tanados-logo.png", import.meta.url).href;
+const LOCAL_FAVICON_URL = new URL("../src/images/tanados-favicon.png", import.meta.url).href;
+const BRAND_SURFACE_SELECTOR = [
+  ".pageTitleWithLogo",
+  ".headerLogo",
+  ".embyLogo",
+  ".adminDrawerLogo",
+  ".skinHeader .headerLogo",
+  ".skinHeader .pageTitleWithLogo",
+  ".skinHeader .pageTitle"
+].join(", ");
+const BRAND_IMAGE_SELECTOR = [
+  ".pageTitleWithLogo img",
+  ".headerLogo img",
+  ".embyLogo img",
+  ".adminDrawerLogo img",
+  ".skinHeader .headerLogo img",
+  ".skinHeader .pageTitleWithLogo img"
+].join(", ");
+const LOGIN_SURFACE_SELECTOR = [
+  "#loginPage h1",
+  ".loginDisclaimerContainer h1",
+  ".splashLogo",
+  "#jms-boot-splash-logo"
+].join(", ");
+const LOGIN_IMAGE_SELECTOR = [
+  "#loginPage .imgLogoIcon img",
+  "#loginPage img.headerLogo",
+  "#loginPage img[alt*='logo' i]",
+  ".loginDisclaimerContainer img",
+  ".splashLogo img",
+  "#jms-boot-splash-logo img"
+].join(", ");
+const TEXT_SELECTOR = [
+  ".pageTitle",
+  ".pageTitleWithLogo",
+  "#loginPage .readOnlyContent h1",
+  ".loginDisclaimerContainer h1",
+  ".adminDrawerLogo + .listItemBody"
+].join(", ");
 
-function markRoot() {
-  try {
-    document.documentElement?.setAttribute(ROOT_ATTR, "1");
-    document.documentElement?.style?.setProperty("--tanados-runtime-logo-url", `url("${LOGO_URL}")`);
-  } catch {}
+let brandingObserver = null;
+let applyTimer = 0;
+
+function text(value) {
+  return String(value ?? "").trim();
 }
 
-function isJellyfinText(value) {
-  return /jellyfin/i.test(String(value || ""));
+function currentRuntime() {
+  return getRuntimeConfigSnapshot() || DEFAULTS;
 }
 
-function isLogoHint(value) {
-  return /(jellyfin|logo|splash|brand|headerlogo|pagetitlewithlogo|embylogo)/i.test(String(value || ""));
+function resolveHeaderLogoUrl(runtime = currentRuntime()) {
+  return text(runtime.headerLogoUrl) || LOCAL_HEADER_LOGO_URL;
 }
 
-function replaceDocumentTitle() {
-  try {
-    if (isJellyfinText(document.title)) {
-      document.title = document.title.replace(/jellyfin/ig, BRAND_NAME);
-    }
-    if (!document.title || document.title.trim().toLowerCase() === "jellyfin") {
-      document.title = BRAND_NAME;
-    }
-  } catch {}
+function resolveLoginLogoUrl(runtime = currentRuntime()) {
+  return text(runtime.loginLogoUrl) || resolveHeaderLogoUrl(runtime) || LOCAL_LOGIN_LOGO_URL;
+}
+
+function resolveFaviconUrl(runtime = currentRuntime()) {
+  return text(runtime.faviconUrl) || LOCAL_FAVICON_URL;
+}
+
+function resolveLoginBackgroundUrl(runtime = currentRuntime()) {
+  return text(runtime.loginBackgroundUrl);
+}
+
+function applyRootRuntime(runtime = currentRuntime()) {
+  const root = document.documentElement;
+  if (!root) return;
+
+  root.setAttribute(ROOT_ATTR, "1");
+  root.setAttribute("data-tanados-header-logo", runtime.showHeaderLogo === false ? "0" : "1");
+  root.setAttribute("data-tanados-header-logo-compact", runtime.useCompactHeaderLogo === true ? "1" : "0");
+  root.style.setProperty("--tanados-runtime-logo-url", `url("${resolveHeaderLogoUrl(runtime)}")`);
+  root.style.setProperty("--tanados-runtime-login-logo-url", `url("${resolveLoginLogoUrl(runtime)}")`);
+  root.style.setProperty("--tanados-runtime-favicon-url", `url("${resolveFaviconUrl(runtime)}")`);
+  root.style.setProperty("--tanados-runtime-primary", text(runtime.primaryColor) || DEFAULTS.primaryColor);
+  root.style.setProperty("--tanados-runtime-secondary", text(runtime.secondaryColor) || DEFAULTS.secondaryColor);
+  root.style.setProperty("--tanados-runtime-accent", text(runtime.accentColor) || DEFAULTS.accentColor);
+  root.style.setProperty("--tanados-runtime-app-name", `"${(text(runtime.appDisplayName) || DEFAULTS.appDisplayName).replace(/"/g, '\\"')}"`);
+
+  const loginBackgroundUrl = resolveLoginBackgroundUrl(runtime);
+  if (loginBackgroundUrl) {
+    root.style.setProperty("--tanados-runtime-login-background-url", `url("${loginBackgroundUrl}")`);
+  } else {
+    root.style.removeProperty("--tanados-runtime-login-background-url");
+  }
 }
 
 function ensureIconLink(rel, href) {
-  try {
-    const selector = `link[rel="${rel}"]`;
-    let link = document.head?.querySelector(selector);
-    if (!link && document.head) {
-      link = document.createElement("link");
-      link.rel = rel;
-      document.head.appendChild(link);
-    }
-    if (link) {
-      link.href = href;
-      link.type = "image/png";
-      link.setAttribute("data-tanados-brand", "true");
-    }
-  } catch {}
+  let link = document.head?.querySelector(`link[rel="${rel}"]`);
+  if (!link && document.head) {
+    link = document.createElement("link");
+    link.rel = rel;
+    document.head.appendChild(link);
+  }
+  if (!link) return;
+  link.href = href;
+  link.type = "image/png";
+  link.setAttribute("data-tanados-brand", "true");
 }
 
-function replaceFavicons() {
-  ensureIconLink("icon", FAVICON_URL);
-  ensureIconLink("shortcut icon", FAVICON_URL);
-  ensureIconLink("apple-touch-icon", FAVICON_URL);
+function applyFavicons(runtime = currentRuntime()) {
+  const faviconUrl = resolveFaviconUrl(runtime);
+  ensureIconLink("icon", faviconUrl);
+  ensureIconLink("shortcut icon", faviconUrl);
+  ensureIconLink("apple-touch-icon", faviconUrl);
+
   try {
     document.querySelectorAll("link[rel*='icon' i]").forEach((link) => {
-      link.href = FAVICON_URL;
+      link.href = faviconUrl;
       link.type = "image/png";
       link.setAttribute("data-tanados-brand", "true");
     });
   } catch {}
 }
 
-function replaceImage(img) {
+function shouldRewriteText(value) {
+  const clean = text(value);
+  return !!clean && OLD_BRAND_TEST_RE.test(clean);
+}
+
+function rewriteTextValue(value, runtime = currentRuntime()) {
+  const clean = text(value);
+  if (!clean) return runtime.appDisplayName || DEFAULTS.appDisplayName;
+  if (!shouldRewriteText(clean)) return clean;
+  return clean.replace(OLD_BRAND_RE, runtime.appDisplayName || DEFAULTS.appDisplayName);
+}
+
+function replaceDocumentTitle(runtime = currentRuntime()) {
   try {
-    if (!img || img.dataset?.tanadosLogo === "true") return;
-    const hint = [
-      img.alt,
-      img.title,
-      img.getAttribute("aria-label"),
-      img.className,
-      img.id,
-      img.src,
-      img.currentSrc
-    ].join(" ");
-    if (!isLogoHint(hint)) return;
-    img.dataset.tanadosLogo = "true";
-    img.src = LOGO_URL;
+    const nextTitle = rewriteTextValue(document.title, runtime);
+    document.title = nextTitle || runtime.appDisplayName || DEFAULTS.appDisplayName;
+  } catch {}
+}
+
+function markBrandSurface(el, { logoUrl, showLogo = true, compact = false, appName } = {}) {
+  if (!(el instanceof HTMLElement)) return;
+  el.dataset.tanadosBrand = "surface";
+  el.dataset.tanadosAppName = text(appName) || DEFAULTS.appDisplayName;
+  el.dataset.tanadosLogoVisible = showLogo === false ? "0" : "1";
+  el.dataset.tanadosLogoCompact = compact === true ? "1" : "0";
+  if (logoUrl && showLogo !== false) {
+    el.style.backgroundImage = `url("${logoUrl}")`;
+  } else {
+    el.style.removeProperty("background-image");
+  }
+  el.setAttribute("aria-label", el.dataset.tanadosAppName);
+  el.setAttribute("title", el.dataset.tanadosAppName);
+}
+
+function brandImages(selector, logoUrl, appName) {
+  document.querySelectorAll(selector).forEach((img) => {
+    if (!(img instanceof HTMLImageElement)) return;
+    img.dataset.tanadosBrand = "image";
+    img.src = logoUrl;
     img.removeAttribute("srcset");
-    img.alt = BRAND_NAME;
-    img.title = BRAND_NAME;
-    img.setAttribute("aria-label", BRAND_NAME);
-  } catch {}
+    img.alt = appName;
+    img.title = appName;
+    img.setAttribute("aria-label", appName);
+  });
 }
 
-function replaceBackgroundLogo(el) {
-  try {
-    if (!el || el.dataset?.tanadosLogo === "true") return;
-    const hint = [el.className, el.id, el.getAttribute("aria-label"), el.getAttribute("title")].join(" ");
-    if (!isLogoHint(hint)) return;
-    el.dataset.tanadosLogo = "true";
-    el.setAttribute("aria-label", BRAND_NAME);
-    el.setAttribute("title", BRAND_NAME);
-    el.style.backgroundImage = `url("${LOGO_URL}")`;
-    el.style.backgroundRepeat = "no-repeat";
-    el.style.backgroundPosition = "center";
-    el.style.backgroundSize = "contain";
-    if (el.textContent && isJellyfinText(el.textContent)) {
-      el.textContent = BRAND_NAME;
+function applyHeaderBranding(runtime = currentRuntime()) {
+  const appName = text(runtime.appDisplayName) || DEFAULTS.appDisplayName;
+  const logoUrl = resolveHeaderLogoUrl(runtime);
+  const showLogo = runtime.showHeaderLogo !== false;
+  const compact = runtime.useCompactHeaderLogo === true;
+
+  document.querySelectorAll(BRAND_SURFACE_SELECTOR).forEach((el) => {
+    markBrandSurface(el, { logoUrl, showLogo, compact, appName });
+    if (showLogo === false && shouldRewriteText(el.textContent)) {
+      el.textContent = appName;
+    } else if (shouldRewriteText(el.textContent)) {
+      el.textContent = rewriteTextValue(el.textContent, runtime);
     }
-  } catch {}
+  });
+
+  brandImages(BRAND_IMAGE_SELECTOR, logoUrl, appName);
 }
 
-function replaceTextNodes() {
-  try {
-    const candidates = document.querySelectorAll(".pageTitle, .pageTitleWithLogo, .loginDisclaimerContainer h1, h1, h2, title");
-    candidates.forEach((el) => {
-      if (!el || el.dataset?.tanadosText === "true") return;
-      if (isJellyfinText(el.textContent)) {
-        el.textContent = el.textContent.replace(/jellyfin/ig, BRAND_NAME);
-        el.dataset.tanadosText = "true";
-      }
+function applyLoginBranding(runtime = currentRuntime()) {
+  const appName = text(runtime.appDisplayName) || DEFAULTS.appDisplayName;
+  const logoUrl = resolveLoginLogoUrl(runtime);
+
+  document.querySelectorAll(LOGIN_SURFACE_SELECTOR).forEach((el) => {
+    markBrandSurface(el, {
+      logoUrl,
+      showLogo: true,
+      compact: false,
+      appName
     });
-  } catch {}
+    if (shouldRewriteText(el.textContent)) {
+      el.textContent = rewriteTextValue(el.textContent, runtime);
+    }
+  });
+
+  brandImages(LOGIN_IMAGE_SELECTOR, logoUrl, appName);
 }
 
-function replaceLogos() {
-  markRoot();
-  replaceDocumentTitle();
-  replaceFavicons();
-  try {
-    document.querySelectorAll("img, picture img, .imgLogoIcon").forEach(replaceImage);
-    document.querySelectorAll([
-      ".pageTitleWithLogo",
-      ".headerLogo",
-      ".embyLogo",
-      ".adminDrawerLogo",
-      ".splashLogo",
-      "#jms-boot-splash-logo",
-      "[class*='Logo']",
-      "[class*='logo']",
-      "[id*='Logo']",
-      "[id*='logo']"
-    ].join(",")).forEach(replaceBackgroundLogo);
-  } catch {}
-  replaceTextNodes();
+function applyBrandText(runtime = currentRuntime()) {
+  const appName = text(runtime.appDisplayName) || DEFAULTS.appDisplayName;
+
+  document.querySelectorAll(TEXT_SELECTOR).forEach((el) => {
+    if (!(el instanceof HTMLElement)) return;
+    const current = text(el.textContent);
+    if (!current) return;
+    if (!shouldRewriteText(current)) return;
+    el.textContent = rewriteTextValue(current, runtime) || appName;
+  });
 }
 
-let observer;
+function applyBranding(runtime = currentRuntime()) {
+  applyRootRuntime(runtime);
+  applyFavicons(runtime);
+  replaceDocumentTitle(runtime);
+  applyHeaderBranding(runtime);
+  applyLoginBranding(runtime);
+  applyBrandText(runtime);
+}
+
+function queueApplyBranding(runtime = currentRuntime(), delayMs = 48) {
+  clearTimeout(applyTimer);
+  applyTimer = window.setTimeout(() => {
+    applyBranding(runtime);
+  }, delayMs);
+}
+
 function startObserver() {
+  if (brandingObserver) {
+    try {
+      brandingObserver.disconnect();
+    } catch {}
+  }
+
+  brandingObserver = new MutationObserver(() => {
+    queueApplyBranding(currentRuntime(), 64);
+  });
+
   try {
-    if (observer) observer.disconnect();
-    observer = new MutationObserver(() => {
-      window.clearTimeout(startObserver._timer);
-      startObserver._timer = window.setTimeout(replaceLogos, 60);
-    });
-    observer.observe(document.documentElement || document.body, {
+    brandingObserver.observe(document.documentElement || document.body, {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["src", "srcset", "class", "style", "alt", "title", "aria-label"]
+      attributeFilter: ["class", "src", "srcset", "title", "aria-label"]
     });
   } catch {}
 }
 
-replaceLogos();
+applyBranding(DEFAULTS);
+void fetchRuntimeConfig({ force: true })
+  .then((runtime) => {
+    applyBranding(runtime);
+  })
+  .catch(() => {
+    applyBranding(currentRuntime());
+  });
+
+subscribeRuntimeConfig((runtime) => {
+  applyBranding(runtime);
+});
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", replaceLogos, { once: true });
+  document.addEventListener("DOMContentLoaded", () => applyBranding(currentRuntime()), { once: true });
 }
-window.addEventListener("load", replaceLogos, { once: true });
-window.setTimeout(replaceLogos, 500);
-window.setTimeout(replaceLogos, 1500);
-window.setTimeout(replaceLogos, 4000);
+
+window.addEventListener("load", () => applyBranding(currentRuntime()), { once: true });
+window.addEventListener("pageshow", () => applyBranding(currentRuntime()), { passive: true });
+window.addEventListener("hashchange", () => queueApplyBranding(currentRuntime()), { passive: true });
 startObserver();
 
 window.TanadosUIBranding = {
-  logoUrl: LOGO_URL,
-  faviconUrl: FAVICON_URL,
-  apply: replaceLogos
+  get runtime() {
+    return currentRuntime();
+  },
+  apply() {
+    applyBranding(currentRuntime());
+  },
+  defaults: {
+    headerLogoUrl: LOCAL_HEADER_LOGO_URL,
+    loginLogoUrl: LOCAL_LOGIN_LOGO_URL,
+    faviconUrl: LOCAL_FAVICON_URL
+  }
 };

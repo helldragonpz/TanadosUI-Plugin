@@ -8,6 +8,8 @@ import { getGlobalTmdbApiKey, sanitizeTmdbApiKey } from "./jmsPluginConfig.js";
 import { ensureStudioHubLogoFromTmdb, ensureStudioHubManualEntry, JMS_STUDIO_HUB_MANUAL_ENTRY_ADDED_EVENT } from "./studioHubsShared.js";
 import { showNotification } from "./player/ui/notification.js";
 import { WATCHLIST_MODAL_ID, getWatchlistButtonText, getWatchlistTabKey, getWatchlistToast, openWatchlistModal } from "./watchlist.js";
+import { createAudioLanguageBadges } from "./audioLanguageUtils.js";
+import { getRuntimeConfigSnapshot } from "./runtimeConfig.js";
 
 const config = getConfig();
 const labels =
@@ -59,6 +61,18 @@ function isStale(ts, maxAgeMs) {
 function __prefersReducedMotion() {
   try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
   catch { return false; }
+}
+
+function renderDetailAudioBadgesHtml(badges = []) {
+  if (!Array.isArray(badges) || !badges.length) return "";
+
+  return `
+    <div class="jmsdm-audio-flags" aria-label="Audio languages">
+      ${badges.map((badge) => `
+        <span class="jmsdm-audio-flag" title="${escapeHtml(badge.label || badge.code)}">${escapeHtml(badge.text)}</span>
+      `).join("")}
+    </div>
+  `;
 }
 
 function __resolveOriginEl(el) {
@@ -3712,6 +3726,12 @@ export async function openDetailsModal({ itemId, serverId = "", preferBackdropIn
   const subtitleTracks = isBoxSet
     ? []
     : getMediaStreamsByType(mediaSource, "Subtitle").map(formatSubtitleStream).filter(Boolean).slice(0, 4);
+  const runtimeConfig = getRuntimeConfigSnapshot();
+  const detailAudioBadges = runtimeConfig?.enableAudioFlagsOnDetails !== false
+    ? createAudioLanguageBadges(mediaSource?.MediaStreams, {
+        maxCount: Math.max(1, Number(runtimeConfig?.audioFlagMaxCount) || 2)
+      })
+    : [];
   const seasonEpisodeText = (() => {
     if (!isEpisode) return "";
     const seasonNumber = Number(baseItem?.ParentIndexNumber || 0);
@@ -3999,6 +4019,7 @@ wireMiniCardDelegation();
                       <h2 class="jmsdm-preview-title">${escapeHtml(name)}</h2>
                       ${subtitleLine ? `<div class="jmsdm-preview-subtitle">${escapeHtml(subtitleLine)}</div>` : ""}
                       ${infoLine ? `<div class="jmsdm-preview-subtitle">${escapeHtml(infoLine)}</div>` : ""}
+                      ${renderDetailAudioBadgesHtml(detailAudioBadges)}
                       ${renderPreviewChips(previewChips)}
                     </div>
                   </div>

@@ -1,4 +1,9 @@
-import { getLanguageLabels, getDefaultLanguage, getStoredLanguagePreference } from '../language/index.js';
+import {
+  getDefaultDateLocaleForLanguage,
+  getLanguageLabels,
+  getDefaultLanguage,
+  getStoredLanguagePreference
+} from '../language/index.js';
 
 let __globalOverride =
   (typeof window !== "undefined" && window.__JMS_MANAGED_STORAGE__?.bootstrapOverride)
@@ -599,6 +604,7 @@ export function getConfig() {
 }
 
   const defaultLanguage = getDefaultLanguage();
+  const resolvedDateLocale = localStorage.getItem('dateLocale') || getDefaultDateLocaleForLanguage(defaultLanguage);
   const previewPlaybackMode = readPreviewPlaybackMode();
   const disableAllPlayback = previewPlaybackMode === 'none';
   const enableTrailerPlayback = previewPlaybackMode === 'trailer';
@@ -692,7 +698,7 @@ export function getConfig() {
     useRandomContent: localStorage.getItem('useRandomContent') !== 'false',
     fullscreenMode: localStorage.getItem('fullscreenMode') === 'true' ? true : false,
     listLimit: 20,
-    version: "v2.8.0",
+    version: "v2.9.0.1",
     historySize: 20,
     updateInterval: 300000,
     nextTracksSource: localStorage.getItem('nextTracksSource') || 'playlist',
@@ -714,7 +720,7 @@ export function getConfig() {
     historylimit: parseInt(localStorage.getItem('historylimit'), 10) || 10,
     playerTheme: localStorage.getItem('playerTheme') || 'dark',
     playerStyle: localStorage.getItem('playerStyle') || 'player',
-    dateLocale: localStorage.getItem('dateLocale') || 'tr-TR',
+    dateLocale: resolvedDateLocale,
     maxExcludeIdsForUri: parseInt(localStorage.getItem('maxExcludeIdsForUri'), 10) || 100,
     nextTrack: parseInt(localStorage.getItem('nextTrack'), 10) || 100,
     topTrack: parseInt(localStorage.getItem('topTrack'), 10) || 30,

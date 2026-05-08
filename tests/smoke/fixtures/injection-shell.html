@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="bg">
+  <head>
+    <meta charset="utf-8">
+    <base href="/web/">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Jellyfin</title>
+  </head>
+  <body>
+    <header class="skinHeader">
+      <div class="headerLogo">Jellyfin</div>
+      <div class="pageTitleWithLogo">Jellyfin</div>
+      <div class="emby-tabs-slider">
+        <button type="button" class="emby-tab-button active" aria-selected="true">Начало</button>
+        <button type="button" class="emby-tab-button">Watchlist</button>
+      </div>
+      <nav class="mui-tabs-shell">
+        <a href="#/home?tab=0" aria-selected="true">Начало</a>
+        <a href="#/home?tab=1">Любими</a>
+      </nav>
+    </header>
+
+    <main>
+      <section id="loginPage" class="loginPage">
+        <div class="readOnlyContent">
+          <h1>Jellyfin</h1>
+        </div>
+        <form class="localLoginForm manualLoginForm">
+          <div class="imgLogoIcon">
+            <img
+              alt="Jellyfin logo"
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40' viewBox='0 0 120 40'%3E%3Crect width='120' height='40' rx='8' fill='%23101018'/%3E%3C/svg%3E">
+          </div>
+          <label>
+            Потребител
+            <input class="emby-input" type="text" autocomplete="username">
+          </label>
+          <label>
+            Парола
+            <input class="emby-input" type="password" autocomplete="current-password">
+          </label>
+          <button type="submit" class="button-submit raised">Вход</button>
+        </form>
+      </section>
+
+      <section id="indexPage">
+        <div class="homeSectionsContainer">
+          <section class="verticalSection section0">
+            <h2>Existing Home Section</h2>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

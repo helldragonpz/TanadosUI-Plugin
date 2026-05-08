@@ -10,6 +10,7 @@ namespace Jellyfin.Plugin.TanadosUI
     {
         public void RegisterServices(IServiceCollection services, IServerApplicationHost applicationHost)
         {
+            services.AddHttpClient();
             services.AddSingleton<TrailerAutomationService>();
             services.AddTransient<IStartupFilter, JMSStartupFilter>();
         }
