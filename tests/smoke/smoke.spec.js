@@ -11,6 +11,8 @@ const runtimeConfig = {
   accentColor: "#f2c66b",
   showHeaderLogo: true,
   useCompactHeaderLogo: false,
+  showNativeHomeTabs: true,
+  showWatchlistInTopNav: true,
   enableSonarrIntegration: true,
   sonarrUrl: "",
   sonarrApiKey: "",
@@ -26,7 +28,7 @@ const runtimeConfig = {
   audioFlagMaxCount: 2,
   preferredLang: "bg-BG",
   fallbackLang: "en-US",
-  version: "2.9.0.2"
+  version: "2.9.0.3"
 };
 
 const adminRuntimeConfig = {
@@ -133,6 +135,34 @@ const recentMovieItems = {
   ]
 };
 
+const audioItemDetails = {
+  "movie-1": {
+    Id: "movie-1",
+    Name: "Smoke Movie One",
+    Type: "Movie",
+    MediaStreams: [
+      { Type: "Audio", Language: "bg", IsDefault: true },
+      { Type: "Audio", Language: "en" }
+    ]
+  },
+  "movie-2": {
+    Id: "movie-2",
+    Name: "Smoke Movie Two",
+    Type: "Movie",
+    MediaStreams: [
+      { Type: "Audio", Language: "en", IsDefault: true }
+    ]
+  },
+  "movie-3": {
+    Id: "movie-3",
+    Name: "Smoke Movie Three",
+    Type: "Movie",
+    MediaStreams: [
+      { Type: "Audio", Language: "ru", IsDefault: true }
+    ]
+  }
+};
+
 function createApiUser(isAdmin = true) {
   return {
     Id: "user-1",
@@ -224,12 +254,40 @@ async function stubJson(page, pattern, payload, status = 200) {
   });
 }
 
-async function installApiRoutes(page, { isAdmin = true } = {}) {
-  await stubJson(page, "**/TanadosUI/runtime-config", runtimeConfig);
-  await stubJson(page, "**/Plugins/TanadosUI/runtime-config", runtimeConfig);
-  await stubJson(page, "**/TanadosUI/runtime-config/admin", adminRuntimeConfig);
-  await stubJson(page, "**/Plugins/TanadosUI/runtime-config/admin", adminRuntimeConfig);
+async function installApiRoutes(page, { isAdmin = true, runtimeOverride = {}, adminRuntimeOverride = {} } = {}) {
+  const publicRuntime = { ...runtimeConfig, ...runtimeOverride };
+  const adminRuntime = { ...adminRuntimeConfig, ...runtimeOverride, ...adminRuntimeOverride };
+  await stubJson(page, "**/TanadosUI/runtime-config", publicRuntime);
+  await stubJson(page, "**/Plugins/TanadosUI/runtime-config", publicRuntime);
+  await stubJson(page, "**/TanadosUI/runtime-config/admin", adminRuntime);
+  await stubJson(page, "**/Plugins/TanadosUI/runtime-config/admin", adminRuntime);
   await stubJson(page, "**/TanadosUI/upcoming/feed", upcomingFeed);
+  await page.route("**/TanadosUI/upcoming/test", async (route) => {
+    const body = route.request().postDataJSON?.() || {};
+    const source = String(body.source || "").toLowerCase();
+    const sourceName = source === "radarr" ? "Radarr" : "Sonarr";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify({
+        ok: true,
+        reachable: true,
+        source: sourceName,
+        itemCount: source === "radarr" ? 1 : 2,
+        posterCount: source === "radarr" ? 1 : 2,
+        sampleItems: [
+          {
+            title: source === "radarr" ? "The Example Movie" : "The Example Episode",
+            subtitle: source === "radarr" ? "Radarr release" : "Series S01E02",
+            type: source === "radarr" ? "Movie" : "Episode",
+            releaseDateUtc: "2026-05-12T00:00:00Z",
+            hasPoster: true
+          }
+        ],
+        warning: ""
+      })
+    });
+  });
   await stubJson(page, "**/TanadosUI/config", trailerConfig);
   await stubJson(page, "**/TanadosUI/trailers/status", { ok: true, running: false });
   await stubJson(page, "**/TanadosUI/lyrics/status", { ok: true, running: false });
@@ -242,6 +300,26 @@ async function installApiRoutes(page, { isAdmin = true } = {}) {
 
 async function installRecentRowsRoutes(page) {
   await stubJson(page, "**/Users/user-1/Views", homeViews);
+  await page.route("**/Users/user-1/Items/*", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    const itemId = pathname.split("/").pop();
+    const payload = audioItemDetails[itemId];
+
+    if (!payload) {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify({ Message: "Not found" })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify(payload)
+    });
+  });
   await page.route("**/Users/user-1/Items?**", async (route) => {
     const url = new URL(route.request().url());
     const itemTypes = url.searchParams.get("IncludeItemTypes") || "";
@@ -303,9 +381,12 @@ test("login branding injection rewrites app surfaces without duplicating logos",
   await expect(page).toHaveTitle("Tanados UI");
   await expect(page.locator("#loginPage h1")).toHaveAttribute("data-tanados-brand", "surface");
   await expect(page.locator(".headerLogo")).toHaveAttribute("data-tanados-brand", "surface");
+  await expect(page.locator(".mainDrawerLogo")).toHaveAttribute("data-tanados-brand", "surface");
   await expect(page.locator("head link[rel='icon']")).toHaveAttribute("data-tanados-brand", "true");
   await expect(page.locator("#loginPage h1")).toContainText("Tanados UI");
   await expect(page.locator(".headerLogo")).toHaveCount(1);
+  await expect(page.locator(".mainDrawer .TanadosUI-drawer-icon")).toHaveCount(4);
+  await expect(page.locator(".emby-tabs-slider .TanadosUI-shell-icon")).toHaveCount(2);
 
   expect(pageErrors).toEqual([]);
 });
@@ -337,6 +418,16 @@ test("settings wrapper mounts the embedded Tanados settings shell", async ({ pag
   await expect(page.locator(".settings-tab[data-tab='branding']")).toBeVisible();
   await expect(page.locator(".settings-tab[data-tab='upcoming']")).toBeVisible();
   await expect(page.locator("#branding-panel")).toBeVisible();
+  await expect(page.locator('#branding-panel [name="ShowNativeHomeTabs"]')).toBeVisible();
+  await expect(page.locator('#branding-panel [name="ShowWatchlistInTopNav"]')).toBeVisible();
+
+  await page.locator(".settings-tab[data-tab='upcoming']").click();
+  await expect(page.locator('#upcoming-panel [name="SonarrUrl"]')).toHaveValue("https://sonarr.example.com");
+  await expect(page.locator('#upcoming-panel button[data-source="sonarr"]')).toBeVisible();
+  await expect(page.locator('#upcoming-panel button[data-source="radarr"]')).toBeVisible();
+  await page.locator('#upcoming-panel button[data-source="sonarr"]').click();
+  await expect(page.locator('#upcoming-panel .tanados-inline-status[data-source="sonarr"]')).toHaveClass(/tanados-inline-status--success/);
+  await expect(page.locator('#upcoming-panel .tanados-inline-status[data-source="sonarr"]')).toContainText("Sonarr");
 
   const tabContentOverflow = await page.locator(".settings-tab-content").evaluate((el) => getComputedStyle(el).overflowY);
   const tabsOverflow = await page.locator(".settings-tabs").evaluate((el) => getComputedStyle(el).overflowY);
@@ -364,6 +455,45 @@ test("upcoming calendar injects top-nav and home section on home views", async (
   await expect(page.locator(".mui-tabs-shell .TanadosUI-upcoming-nav-button")).toBeVisible();
   await expect(page.locator("#TanadosUI-upcoming-home-section")).toBeVisible();
   await expect(page.locator("#TanadosUI-upcoming-home-section .TanadosUIup-card")).toHaveCount(2);
+
+  expect(pageErrors).toEqual([]);
+});
+
+test("runtime shell toggles can hide native tabs and watchlist shortcuts", async ({ page }) => {
+  const pageErrors = trackPageErrors(page);
+  await installBrowserStubs(page);
+  await installApiRoutes(page, {
+    runtimeOverride: {
+      showNativeHomeTabs: false,
+      showWatchlistInTopNav: false,
+      showUpcomingInTopNav: true
+    }
+  });
+
+  await page.goto("/tests/smoke/fixtures/injection-shell.html");
+  await page.evaluate(() => {
+    window.location.hash = "#/home?tab=0";
+  });
+
+  await page.evaluate(async () => {
+    await new Promise((resolve, reject) => {
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = "/slider/src/tanados-branding.css";
+      link.onload = () => resolve();
+      link.onerror = () => reject(new Error("Failed to load tanados-branding.css"));
+      document.head.appendChild(link);
+    });
+    await import("/slider/modules/tanadosBranding.js");
+    await import("/slider/modules/watchlist.js");
+    await import("/slider/modules/upcomingCalendar.js");
+  });
+
+  await expect(page.locator(".emby-tabs-slider .emby-tab-button").first()).toBeHidden();
+  await expect(page.locator(".mui-tabs-shell a[href='#/home?tab=0']")).toBeHidden();
+  await expect(page.locator(".TanadosUI-watchlist-nav-button").first()).toBeHidden();
+  await expect(page.locator("html")).toHaveAttribute("data-tanados-show-native-home-tabs", "0");
+  await expect(page.locator("html")).toHaveAttribute("data-tanados-show-watchlist-top-nav", "0");
 
   expect(pageErrors).toEqual([]);
 });
@@ -410,6 +540,69 @@ test("recent movie rows inject home library cards on home views", async ({ page 
   await expect(section.locator('[data-item-id="movie-1"]')).toBeVisible();
   await expect(section.locator('[data-item-id="movie-2"]')).toBeVisible();
   await expect(section.locator('[data-item-id="movie-3"]')).toBeVisible();
+
+  expect(pageErrors).toEqual([]);
+});
+
+test("audio language badges appear on cards and native details pages", async ({ page }) => {
+  const pageErrors = trackPageErrors(page);
+  await installBrowserStubs(page);
+  await installApiRoutes(page);
+  await installRecentRowsRoutes(page);
+
+  await page.addInitScript(() => {
+    localStorage.setItem("enableHomeSectionsMaster", "true");
+    localStorage.setItem("enableRecentRows", "true");
+    localStorage.setItem("enableRecentMoviesRow", "true");
+    localStorage.setItem("enableRecentSeriesRow", "false");
+    localStorage.setItem("enableRecentEpisodesRow", "false");
+    localStorage.setItem("enableRecentMusicRow", "false");
+    localStorage.setItem("enableRecentMusicTracksRow", "false");
+    localStorage.setItem("enableContinueMovies", "false");
+    localStorage.setItem("enableContinueSeries", "false");
+    localStorage.setItem("enableNextUpRow", "false");
+    localStorage.setItem("enableTop10MoviesRow", "false");
+    localStorage.setItem("enableTop10SeriesRow", "false");
+    localStorage.setItem("enableTmdbTopMoviesRow", "false");
+    localStorage.setItem("showRecentRowsHeroCards", "false");
+    localStorage.setItem("showRecentMoviesHeroCards", "false");
+    localStorage.setItem("recentRowsSplitMovieLibs", "false");
+    localStorage.setItem("currentUserId", "user-1");
+  });
+
+  await page.goto("/tests/smoke/fixtures/injection-shell.html");
+  await page.evaluate(() => {
+    window.location.hash = "#/home?tab=0";
+  });
+
+  await page.evaluate(async () => {
+    const rows = await import("/slider/modules/recentRows.js");
+    await rows.mountRecentRowsLazy({ force: true });
+    await import("/slider/modules/audioLanguageBadges.js");
+  });
+
+  await expect(page.locator('[data-item-id="movie-1"] .TanadosUI-audio-card-badges')).toContainText("BG");
+  await expect(page.locator('[data-item-id="movie-1"] .TanadosUI-audio-card-badges')).toContainText("EN");
+
+  await page.evaluate(() => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `
+        <div id="itemDetailPage" class="itemDetailPage">
+          <div class="detailPagePrimaryContainer">
+            <div class="detailPagePrimaryContent">
+              <h1 class="itemName">Smoke Movie One</h1>
+            </div>
+          </div>
+        </div>
+      `
+    );
+    window.location.hash = "#/details?id=movie-1";
+    window.dispatchEvent(new Event("hashchange"));
+  });
+
+  await expect(page.locator("#itemDetailPage .TanadosUI-audio-detail-badges")).toContainText("BG");
+  await expect(page.locator("#itemDetailPage .TanadosUI-audio-detail-badges")).toContainText("EN");
 
   expect(pageErrors).toEqual([]);
 });

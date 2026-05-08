@@ -393,6 +393,14 @@ export function createBrandingPanel(config, labels) {
   const accentColor = createTextField("AccentColor", labels.accentColor || "Accent / glow color", "#f2c66b", "color");
   const showHeaderLogo = createCheckboxField("ShowHeaderLogo", labels.showHeaderLogo || "Show logo in header");
   const compactHeaderLogo = createCheckboxField("UseCompactHeaderLogo", labels.useCompactHeaderLogo || "Use compact header logo");
+  const showNativeHomeTabs = createCheckboxField(
+    "ShowNativeHomeTabs",
+    labels.showNativeHomeTabs || "Show Jellyfin home tabs in the top navigation"
+  );
+  const showWatchlistInTopNav = createCheckboxField(
+    "ShowWatchlistInTopNav",
+    labels.showWatchlistInTopNav || "Show Watchlist in the top navigation"
+  );
 
   panel.append(
     displayName.wrap,
@@ -405,9 +413,15 @@ export function createBrandingPanel(config, labels) {
     accentColor.wrap,
     showHeaderLogo.wrap,
     compactHeaderLogo.wrap,
+    showNativeHomeTabs.wrap,
+    showWatchlistInTopNav.wrap,
     createHint(
       labels.brandingUploadHint ||
       "Upload PNG, WebP, JPG, SVG, GIF, or ICO assets here, or paste a direct URL manually. Save or Apply after changing asset fields."
+    ),
+    createHint(
+      labels.shellNavigationHint ||
+      "Use the navigation toggles to hide the stock Jellyfin home tabs or the Watchlist shortcut without editing the header manually."
     ),
     createHint(
       labels.brandingSettingsHint ||
@@ -427,6 +441,8 @@ export function createBrandingPanel(config, labels) {
       setFieldValue(panel, '[name="AccentColor"]', runtime.accentColor);
       setFieldValue(panel, '[name="ShowHeaderLogo"]', runtime.showHeaderLogo);
       setFieldValue(panel, '[name="UseCompactHeaderLogo"]', runtime.useCompactHeaderLogo);
+      setFieldValue(panel, '[name="ShowNativeHomeTabs"]', runtime.showNativeHomeTabs);
+      setFieldValue(panel, '[name="ShowWatchlistInTopNav"]', runtime.showWatchlistInTopNav);
     })
     .catch(() => {
       setFieldValue(panel, '[name="AppDisplayName"]', defaults.appDisplayName);
@@ -435,6 +451,8 @@ export function createBrandingPanel(config, labels) {
       setFieldValue(panel, '[name="AccentColor"]', defaults.accentColor);
       setFieldValue(panel, '[name="ShowHeaderLogo"]', defaults.showHeaderLogo);
       setFieldValue(panel, '[name="UseCompactHeaderLogo"]', defaults.useCompactHeaderLogo);
+      setFieldValue(panel, '[name="ShowNativeHomeTabs"]', defaults.showNativeHomeTabs);
+      setFieldValue(panel, '[name="ShowWatchlistInTopNav"]', defaults.showWatchlistInTopNav);
     });
 
   return panel;

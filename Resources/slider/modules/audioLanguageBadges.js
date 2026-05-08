@@ -3,13 +3,33 @@ import { createAudioLanguageBadges } from "./audioLanguageUtils.js";
 import { fetchRuntimeConfig, getRuntimeConfigSnapshot, subscribeRuntimeConfig } from "./runtimeConfig.js";
 
 const STYLE_ID = "tanados-audio-language-badges-style";
-const BADGE_STRIP_CLASS = "TanadosUI-audio-card-badges";
-const CARD_SELECTOR = [
+const CARD_BADGE_CLASS = "TanadosUI-audio-card-badges";
+const DETAIL_BADGE_CLASS = "TanadosUI-audio-detail-badges";
+const CARD_SCOPE_SELECTOR = [
   ".card[data-id]",
+  ".card[data-item-id]",
+  ".card[data-itemid]",
   ".cardBox[data-id]",
-  "button.cardBox[data-id]",
-  "a.card[data-id]"
+  ".cardBox[data-item-id]",
+  ".cardBox[data-itemid]",
+  ".cardScalable[data-id]",
+  ".cardScalable[data-item-id]",
+  ".cardScalable[data-itemid]",
+  ".itemAction[data-id]",
+  ".itemAction[data-item-id]",
+  ".itemAction[data-itemid]",
+  ".personal-recs-card[data-item-id]",
+  ".personal-recs-card[data-itemid]",
+  ".dir-row-hero[data-item-id]",
+  ".dir-row-hero[data-itemid]",
+  "a[href*='#/details?id=']",
+  "button[data-id]",
+  "button[data-item-id]",
+  "button[data-itemid]",
+  "[data-item-id]",
+  "[data-itemid]"
 ].join(", ");
+const CARD_HOST_SELECTOR = ".cardImageContainer, .cardOverlayContainer, .cardPadder, .cardScalable, .cardBox";
 
 const itemCache = new Map();
 const itemPromises = new Map();
@@ -25,7 +45,7 @@ function ensureStyles() {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-    .${BADGE_STRIP_CLASS} {
+    .${CARD_BADGE_CLASS} {
       position: absolute;
       top: 10px;
       right: 10px;
@@ -36,7 +56,8 @@ function ensureStyles() {
       gap: 6px;
       pointer-events: none;
     }
-    .${BADGE_STRIP_CLASS} .tanados-audio-flag {
+    .${CARD_BADGE_CLASS} .tanados-audio-flag,
+    .${DETAIL_BADGE_CLASS} .tanados-audio-flag {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -53,6 +74,12 @@ function ensureStyles() {
       backdrop-filter: blur(8px);
       text-shadow: none;
     }
+    .${DETAIL_BADGE_CLASS} {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 0;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -60,22 +87,82 @@ function ensureStyles() {
 function getRuntimeOptions() {
   const runtime = getRuntimeConfigSnapshot();
   return {
-    enabled: runtime?.enableAudioFlagsOnCards !== false,
+    cardsEnabled: runtime?.enableAudioFlagsOnCards !== false,
+    detailsEnabled: runtime?.enableAudioFlagsOnDetails !== false,
     maxCount: Math.max(1, Number(runtime?.audioFlagMaxCount) || 2)
   };
 }
 
-function getItemId(card) {
+function parseDetailsIdFromHref(value) {
+  const raw = text(value);
+  if (!raw) return "";
+  const match = raw.match(/[?#&]id=([^&]+)/i);
+  if (!match?.[1]) return "";
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+function getCurrentUserId() {
   return text(
-    card?.dataset?.id ||
-    card?.getAttribute?.("data-id") ||
-    card?.dataset?.itemid ||
-    card?.dataset?.itemId
+    getSessionInfo?.()?.userId ||
+    window.ApiClient?.getCurrentUserId?.() ||
+    window.ApiClient?._currentUserId
   );
 }
 
-function findCardHost(card) {
-  const host = card?.querySelector?.(".cardScalable, .cardImageContainer, .cardPadder, .cardBox") || card;
+function getItemId(target) {
+  const direct = text(
+    target?.dataset?.itemId ||
+    target?.dataset?.itemid ||
+    target?.dataset?.id ||
+    target?.getAttribute?.("data-item-id") ||
+    target?.getAttribute?.("data-itemid") ||
+    target?.getAttribute?.("data-id")
+  );
+  if (direct) return direct;
+
+  const carrier = target?.closest?.("[data-item-id], [data-itemid], [data-id]");
+  const carrierId = text(
+    carrier?.dataset?.itemId ||
+    carrier?.dataset?.itemid ||
+    carrier?.dataset?.id ||
+    carrier?.getAttribute?.("data-item-id") ||
+    carrier?.getAttribute?.("data-itemid") ||
+    carrier?.getAttribute?.("data-id")
+  );
+  if (carrierId) return carrierId;
+
+  const link = target?.closest?.("a[href*='#/details?id='], a[href*='/details?id=']");
+  return parseDetailsIdFromHref(link?.getAttribute?.("href"));
+}
+
+function getCardScope(target) {
+  if (!(target instanceof HTMLElement)) return null;
+  if (target.matches?.(CARD_SCOPE_SELECTOR)) return target;
+
+  const scoped =
+    target.closest?.(".personal-recs-card, .dir-row-hero, .cardContent, .cardScalable, .cardBox, .card, .itemAction") ||
+    target.closest?.("[data-id], [data-item-id], [data-itemid]");
+  return scoped instanceof HTMLElement ? scoped : target;
+}
+
+function getCardHost(target) {
+  const scope = getCardScope(target);
+  if (!scope) return null;
+
+  const direct = scope.matches?.(CARD_HOST_SELECTOR) ? scope : null;
+  const host =
+    scope.querySelector?.(".cardImageContainer") ||
+    scope.querySelector?.(".cardOverlayContainer") ||
+    scope.querySelector?.(".cardPadder") ||
+    scope.querySelector?.(".cardScalable") ||
+    scope.querySelector?.(".cardBox") ||
+    direct ||
+    (scope.matches?.(".personal-recs-card, .dir-row-hero, .card, .cardBox, .cardScalable, .itemAction") ? scope : null);
+
   if (!(host instanceof HTMLElement)) return null;
   if (getComputedStyle(host).position === "static") {
     host.style.position = "relative";
@@ -101,8 +188,7 @@ async function fetchItem(itemId) {
   if (itemPromises.has(itemId)) return itemPromises.get(itemId);
 
   const promise = (async () => {
-    const session = getSessionInfo?.() || {};
-    const userId = text(session.userId || window.ApiClient?.getCurrentUserId?.() || window.ApiClient?._currentUserId);
+    const userId = getCurrentUserId();
     if (!userId) return null;
 
     const item = await makeApiRequest(
@@ -118,11 +204,11 @@ async function fetchItem(itemId) {
   return promise;
 }
 
-function renderBadgeStrip(host, badges = []) {
-  let strip = host.querySelector(`.${BADGE_STRIP_CLASS}`);
+function renderBadgeStrip(host, badges = [], className = CARD_BADGE_CLASS) {
+  let strip = host.querySelector(`.${className}`);
   if (!strip) {
     strip = document.createElement("div");
-    strip.className = BADGE_STRIP_CLASS;
+    strip.className = className;
     host.appendChild(strip);
   }
 
@@ -137,22 +223,45 @@ function renderBadgeStrip(host, badges = []) {
   );
 }
 
-function removeBadgeStrip(host) {
-  host?.querySelector?.(`.${BADGE_STRIP_CLASS}`)?.remove();
+function removeBadgeStrip(host, className = CARD_BADGE_CLASS) {
+  host?.querySelector?.(`.${className}`)?.remove();
+}
+
+function collectCardScopes(root = document) {
+  const cards = new Set();
+
+  const push = (node) => {
+    const scope = getCardScope(node);
+    if (scope instanceof HTMLElement) cards.add(scope);
+  };
+
+  if (root instanceof HTMLElement && root.matches?.(CARD_SCOPE_SELECTOR)) {
+    push(root);
+  }
+
+  try {
+    const nodes = root.querySelectorAll?.(CARD_SCOPE_SELECTOR) || [];
+    nodes.forEach(push);
+  } catch {}
+
+  return Array.from(cards);
 }
 
 async function annotateCard(card) {
-  const { enabled, maxCount } = getRuntimeOptions();
-  const host = findCardHost(card);
+  const { cardsEnabled, maxCount } = getRuntimeOptions();
+  const host = getCardHost(card);
   if (!host) return;
 
-  if (!enabled) {
+  if (!cardsEnabled) {
     removeBadgeStrip(host);
     return;
   }
 
   const itemId = getItemId(card);
-  if (!itemId) return;
+  if (!itemId) {
+    removeBadgeStrip(host);
+    return;
+  }
 
   const item = await fetchItem(itemId);
   if (!isLikelyMediaType(item)) {
@@ -169,24 +278,87 @@ async function annotateCard(card) {
   renderBadgeStrip(host, badges);
 }
 
+function getVisibleDetailPage() {
+  return document.querySelector(
+    "#itemDetailPage:not(.hide), .itemDetailPage:not(.hide), .detailPage:not(.hide), [data-role='page']:not(.hide) .detailPage"
+  );
+}
+
+function getDetailItemId() {
+  const fromHash = parseDetailsIdFromHref(window.location.hash || "");
+  if (fromHash) return fromHash;
+
+  const page = getVisibleDetailPage();
+  return getItemId(page);
+}
+
+function getDetailBadgeAnchor(page) {
+  if (!(page instanceof HTMLElement)) return null;
+  return page.querySelector(
+    ".detailPagePrimaryContent .itemName, .detailPagePrimaryContent h1, .detailPagePrimaryContainer .itemName, .detailPagePrimaryContainer h1, h1.itemName"
+  );
+}
+
 async function refreshVisibleCards() {
   ensureStyles();
 
-  const cards = Array.from(document.querySelectorAll(CARD_SELECTOR))
-    .filter((card) => card instanceof HTMLElement && isCardVisible(card))
-    .slice(0, 36);
+  const cards = collectCardScopes(document)
+    .filter((card) => isCardVisible(card))
+    .slice(0, 64);
 
-  for (const card of cards) {
-    try {
-      await annotateCard(card);
-    } catch {}
+  await Promise.allSettled(cards.map((card) => annotateCard(card)));
+}
+
+async function refreshDetailBadges() {
+  ensureStyles();
+
+  const { detailsEnabled, maxCount } = getRuntimeOptions();
+  const page = getVisibleDetailPage();
+  if (!(page instanceof HTMLElement)) return;
+
+  const title = getDetailBadgeAnchor(page);
+  const parent = title?.parentElement || page;
+  if (!detailsEnabled) {
+    removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
+    return;
   }
+
+  const itemId = getDetailItemId();
+  if (!itemId) {
+    removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
+    return;
+  }
+
+  const item = await fetchItem(itemId);
+  if (!isLikelyMediaType(item)) {
+    removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
+    return;
+  }
+
+  const badges = createAudioLanguageBadges(item?.MediaStreams, { maxCount });
+  if (!badges.length) {
+    removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
+    return;
+  }
+
+  if (!(title instanceof HTMLElement) || !(parent instanceof HTMLElement)) {
+    return;
+  }
+
+  let strip = parent.querySelector(`.${DETAIL_BADGE_CLASS}`);
+  if (!strip) {
+    strip = document.createElement("div");
+    strip.className = DETAIL_BADGE_CLASS;
+    title.insertAdjacentElement("afterend", strip);
+  }
+  renderBadgeStrip(parent, badges, DETAIL_BADGE_CLASS);
 }
 
 export function refreshAudioLanguageBadges() {
   clearTimeout(refreshTimer);
   refreshTimer = window.setTimeout(() => {
     void refreshVisibleCards();
+    void refreshDetailBadges();
   }, 80);
 }
 

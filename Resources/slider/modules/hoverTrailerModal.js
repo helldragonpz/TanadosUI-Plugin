@@ -776,7 +776,7 @@ function installHoverOpenSuppressors() {
   const kill = () => suppressHoverOpens(1200);
   const cardDown = (e) => {
     if (e.target?.closest?.('.jms-trailer-badge, .yt-first-touch-shield')) return;
-    if (e.target?.closest?.('.cardImageContainer,[data-id]')) kill();
+    if (getCardRoot(e.target) || e.target?.closest?.('[data-id], [data-item-id], [data-itemid]')) kill();
   };
   ['pointerdown','mousedown','touchstart','click'].forEach(t => {
     document.addEventListener(t, cardDown, { capture: true, passive: false });
@@ -847,14 +847,11 @@ function _debounce(fn, wait = 80) {
    const cfg = getConfig();
    if (!cfg || cfg.globalPreviewMode !== 'studioMini') return;
 
-  const items = document.querySelectorAll('.cardImageContainer');
+  const items = collectCardRoots(document);
   if (!items.length) return;
   chunkIter(items, (item) => {
     if (item.__miniBound) return;
-    const itemId =
-      item.dataset.itemId ||
-      item.dataset.id ||
-      item.closest?.('[data-id]')?.dataset?.id;
+    const itemId = getItemIdFromCard(item);
     if (!itemId) return;
     item.__miniBound = true;
     attachMiniPosterHover(item, { Id: itemId });
@@ -874,7 +871,7 @@ function installStudioMiniAutobind() {
     for (const m of mutList) {
       for (const n of m.addedNodes) {
         if (n.nodeType !== 1) continue;
-        if (n.classList?.contains('cardImageContainer') || n.querySelector?.('.cardImageContainer')) {
+        if (getCardRoot(n) || n.querySelector?.('.cardImageContainer, .cardOverlayContainer, .cardPadder, .cardScalable, .cardBox, [data-id], [data-item-id], [data-itemid]')) {
           rebind();
           return;
         }
@@ -1035,14 +1032,63 @@ function ensureTrailerBadgeCSS() {
 
 function getCardRoot(el) {
   if (!el) return null;
-  if (el.classList?.contains('cardImageContainer')) return el;
-  return el.closest?.('.cardImageContainer') || null;
+  const hostSelector = '.cardImageContainer, .cardOverlayContainer, .cardPadder, .cardScalable, .cardBox';
+  const scopeSelector = '.personal-recs-card, .dir-row-hero, .cardContent, .cardScalable, .cardBox, .card, .itemAction, [data-id], [data-item-id], [data-itemid]';
+
+  if (el.matches?.(hostSelector)) return el;
+
+  const closestHost = el.closest?.(hostSelector);
+  if (closestHost) return closestHost;
+
+  const scope = el.closest?.(scopeSelector) || el;
+  if (scope?.matches?.(hostSelector)) return scope;
+  const nestedHost = scope?.querySelector?.(hostSelector);
+  if (nestedHost) return nestedHost;
+  return scope?.matches?.('.personal-recs-card, .dir-row-hero, .card, .cardBox, .cardScalable, .itemAction')
+    ? scope
+    : null;
 }
 function getItemIdFromCard(card) {
-  return card?.dataset?.itemId
-      || card?.dataset?.id
-      || card?.closest?.('[data-id]')?.dataset?.id
-      || null;
+  const directId =
+    card?.dataset?.itemId ||
+    card?.dataset?.itemid ||
+    card?.dataset?.id ||
+    card?.getAttribute?.('data-item-id') ||
+    card?.getAttribute?.('data-itemid') ||
+    card?.getAttribute?.('data-id');
+  if (directId) return directId;
+
+  const carrier = card?.closest?.('[data-item-id], [data-itemid], [data-id]');
+  if (!carrier) return null;
+  return (
+    carrier.dataset?.itemId ||
+    carrier.dataset?.itemid ||
+    carrier.dataset?.id ||
+    carrier.getAttribute?.('data-item-id') ||
+    carrier.getAttribute?.('data-itemid') ||
+    carrier.getAttribute?.('data-id') ||
+    null
+  );
+}
+
+function collectCardRoots(root = document) {
+  const items = new Set();
+
+  const push = (node) => {
+    const host = getCardRoot(node);
+    if (host) items.add(host);
+  };
+
+  if (root?.nodeType === 1) {
+    push(root);
+  }
+
+  try {
+    root.querySelectorAll?.('.cardImageContainer, .cardOverlayContainer, .cardPadder, .cardScalable, .cardBox, [data-id], [data-item-id], [data-itemid]')
+      .forEach(push);
+  } catch {}
+
+  return Array.from(items);
 }
 
 let __badgeIO;
@@ -1086,7 +1132,7 @@ function disconnectObservers() {
   __badgeIO = null;
   __trailerBadgeObserver = null;
   try {
-    document.querySelectorAll('.cardImageContainer').forEach((card) => {
+    collectCardRoots(document).forEach((card) => {
       card.__jmsTrailerObserved = false;
       card.__jmsTrailerBadgeObserved = false;
       card.__jmsTrailerBadgePending = false;
@@ -1105,7 +1151,7 @@ function observeCardForTrailer(card) {
 function rescanAllCardsForBadge(root = document) {
   if (!shouldRunTrailerBadge()) return;
   try {
-    const list = root.querySelectorAll?.('.cardImageContainer');
+    const list = collectCardRoots(root);
     if (!list || !list.length) return;
     list.forEach(observeCardForTrailer);
   } catch {}
@@ -1133,10 +1179,11 @@ function installTrailerBadgeAutobind() {
       for (const m of mutList) {
         for (const n of m.addedNodes) {
           if (n.nodeType !== 1) continue;
-          if (n.classList?.contains('cardImageContainer')) {
-            observeCardForTrailer(n);
+          const host = getCardRoot(n);
+          if (host) {
+            observeCardForTrailer(host);
             need = false;
-          } else if (n.querySelector?.('.cardImageContainer')) {
+          } else if (n.querySelector?.('.cardImageContainer, .cardOverlayContainer, .cardPadder, .cardScalable, .cardBox, [data-id], [data-item-id], [data-itemid]')) {
             need = true;
           }
         }
@@ -1234,7 +1281,7 @@ function mountTrailerBadge(card, text = 'Fragman') {
   el.setAttribute('aria-label', text);
 
   const getId = (host) =>
-    host?.dataset?.itemId || host?.dataset?.id || host?.closest?.('[data-id]')?.dataset?.id || null;
+    getItemIdFromCard(host);
 
   const openFromBadge = (evt) => {
     if (evt.cancelable) evt.preventDefault();
@@ -1259,7 +1306,7 @@ function mountTrailerBadge(card, text = 'Fragman') {
 function scanAndMarkCardsForTrailers() {
   if (!shouldRunTrailerBadge()) return;
   ensureTrailerBadgeCSS();
-  const items = document.querySelectorAll('.cardImageContainer');
+  const items = collectCardRoots(document);
   if (!items.length) return;
 
   if (!__trailerBadgeObserver) {
@@ -1281,7 +1328,7 @@ function scanAndMarkCardsForTrailers() {
 
         card.__jmsTrailerBadgePending = true;
         try {
-          const itemId = card.dataset.itemId || card.dataset.id || card.closest?.('[data-id]')?.dataset?.id;
+          const itemId = getItemIdFromCard(card);
           if (!itemId) {
             card.dataset.hastrailer = 'false';
             continue;
@@ -2494,8 +2541,7 @@ export function setupHoverForAllItems() {
       let activeId = null;
       let longPressFiredAt = 0;
 
-      const getId = (el) =>
-        el?.dataset?.itemId || el?.dataset?.id || el?.closest?.('[data-id]')?.dataset?.id || null;
+      const getId = (el) => getItemIdFromCard(el);
 
       const isSuppressionActive = () => (Date.now() - longPressFiredAt) < SUPPRESS_MS;
 
@@ -2534,7 +2580,7 @@ export function setupHoverForAllItems() {
 
       const onTouchStart = async (e) => {
         if (e.target?.closest?.('.jms-trailer-badge')) return;
-        const card = e.target?.closest?.('.cardImageContainer');
+        const card = getCardRoot(e.target);
         if (!card) return;
         const itemId = getId(card);
         if (!itemId) return;
@@ -2587,16 +2633,13 @@ export function setupHoverForAllItems() {
   }
 
   if (mode === 'studioMini') {
-    const items = document.querySelectorAll('.cardImageContainer');
+    const items = collectCardRoots(document);
     installStudioMiniAutobind();
     destroyVideoModal();
     items.forEach(item => {
       if (item.__miniBound) return;
       item.__miniBound = true;
-      const itemId =
-        item.dataset.itemId ||
-        item.dataset.id ||
-        (item.closest('[data-id]') && item.closest('[data-id]').dataset.id);
+      const itemId = getItemIdFromCard(item);
       if (!itemId) return;
       attachMiniPosterHover(item, { Id: itemId });
     });
@@ -2609,10 +2652,9 @@ export function setupHoverForAllItems() {
     const onEnter = async (e) => {
       if (Date.now() < (modalState.__suppressOpenUntil || 0)) return;
       ensureHoverInfra();
-      const item = e.target?.closest?.('.cardImageContainer');
+      const item = getCardRoot(e.target);
       if (!item || isInsideDotArea(item)) return;
-      const itemId =
-        item.dataset.itemId || item.dataset.id || (item.closest('[data-id]')?.dataset?.id);
+      const itemId = getItemIdFromCard(item);
       if (!itemId) return;
       modalState.isMouseInItem = true;
       clearTimeout(modalState.modalHideTimeout);
@@ -2672,7 +2714,7 @@ export function setupHoverForAllItems() {
     };
 
     const onLeave = (e) => {
-      const fromItem = e.target?.closest?.('.cardImageContainer');
+      const fromItem = getCardRoot(e.target);
       if (!fromItem) return;
       const toModal = !!(e.relatedTarget && modalState.videoModal && modalState.videoModal.contains(e.relatedTarget));
       if (toModal) return;

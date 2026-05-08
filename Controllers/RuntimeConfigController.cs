@@ -31,6 +31,8 @@ public class RuntimeConfigController : ControllerBase
         public string? AccentColor { get; set; }
         public bool? ShowHeaderLogo { get; set; }
         public bool? UseCompactHeaderLogo { get; set; }
+        public bool? ShowNativeHomeTabs { get; set; }
+        public bool? ShowWatchlistInTopNav { get; set; }
         public bool? EnableSonarrIntegration { get; set; }
         public string? SonarrUrl { get; set; }
         public string? SonarrApiKey { get; set; }
@@ -92,6 +94,8 @@ public class RuntimeConfigController : ControllerBase
         if (incoming.AccentColor is not null) cfg.AccentColor = NormalizeColor(incoming.AccentColor, cfg.AccentColor, "#f2c66b");
         if (incoming.ShowHeaderLogo.HasValue) cfg.ShowHeaderLogo = incoming.ShowHeaderLogo.Value;
         if (incoming.UseCompactHeaderLogo.HasValue) cfg.UseCompactHeaderLogo = incoming.UseCompactHeaderLogo.Value;
+        if (incoming.ShowNativeHomeTabs.HasValue) cfg.ShowNativeHomeTabs = incoming.ShowNativeHomeTabs.Value;
+        if (incoming.ShowWatchlistInTopNav.HasValue) cfg.ShowWatchlistInTopNav = incoming.ShowWatchlistInTopNav.Value;
         if (incoming.EnableSonarrIntegration.HasValue) cfg.EnableSonarrIntegration = incoming.EnableSonarrIntegration.Value;
         if (incoming.SonarrUrl is not null) cfg.SonarrUrl = NormalizeServerUrl(incoming.SonarrUrl);
         if (incoming.SonarrApiKey is not null) cfg.SonarrApiKey = NormalizeSecret(incoming.SonarrApiKey);
@@ -128,6 +132,8 @@ public class RuntimeConfigController : ControllerBase
             accentColor = NormalizeColor(cfg.AccentColor, "#f2c66b", "#f2c66b"),
             showHeaderLogo = cfg.ShowHeaderLogo,
             useCompactHeaderLogo = cfg.UseCompactHeaderLogo,
+            showNativeHomeTabs = cfg.ShowNativeHomeTabs,
+            showWatchlistInTopNav = cfg.ShowWatchlistInTopNav,
             enableSonarrIntegration = cfg.EnableSonarrIntegration,
             enableRadarrIntegration = cfg.EnableRadarrIntegration,
             hasUpcomingIntegrations = cfg.EnableSonarrIntegration || cfg.EnableRadarrIntegration,
@@ -157,6 +163,8 @@ public class RuntimeConfigController : ControllerBase
             accentColor = NormalizeColor(cfg.AccentColor, "#f2c66b", "#f2c66b"),
             showHeaderLogo = cfg.ShowHeaderLogo,
             useCompactHeaderLogo = cfg.UseCompactHeaderLogo,
+            showNativeHomeTabs = cfg.ShowNativeHomeTabs,
+            showWatchlistInTopNav = cfg.ShowWatchlistInTopNav,
             enableSonarrIntegration = cfg.EnableSonarrIntegration,
             sonarrUrl = NormalizeServerUrl(cfg.SonarrUrl),
             sonarrApiKey = NormalizeSecret(cfg.SonarrApiKey),

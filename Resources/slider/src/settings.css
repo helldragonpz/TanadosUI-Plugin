@@ -610,8 +610,104 @@
     grid-column: 1;
     grid-row: 3;
     justify-content: stretch;
-    flex-wrap: wrap;
-  }
+  flex-wrap: wrap;
+}
+
+.tanados-inline-actions {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.tanados-inline-button {
+  justify-self: start;
+  min-height: 42px;
+  padding: 0.7rem 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(242, 198, 107, 0.18);
+  background: linear-gradient(135deg, rgba(111, 67, 243, 0.9), rgba(47, 107, 255, 0.84));
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  box-shadow: 0 18px 32px rgba(31, 15, 82, 0.2);
+}
+
+.tanados-inline-button[disabled] {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.tanados-inline-status {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--tanados-settings-text);
+}
+
+.tanados-inline-status[hidden] {
+  display: none;
+}
+
+.tanados-inline-status--info {
+  border-color: rgba(47, 107, 255, 0.22);
+  background: rgba(47, 107, 255, 0.08);
+}
+
+.tanados-inline-status--success {
+  border-color: rgba(117, 216, 170, 0.24);
+  background: rgba(117, 216, 170, 0.09);
+}
+
+.tanados-inline-status--warning {
+  border-color: rgba(242, 198, 107, 0.22);
+  background: rgba(242, 198, 107, 0.1);
+}
+
+.tanados-inline-status--error {
+  border-color: rgba(255, 109, 109, 0.22);
+  background: rgba(255, 109, 109, 0.1);
+}
+
+.tanados-inline-status__summary {
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.tanados-inline-status__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  color: var(--tanados-settings-muted);
+  font-size: 0.92rem;
+}
+
+.tanados-inline-status__warning {
+  color: #fbe8b0;
+  line-height: 1.55;
+}
+
+.tanados-inline-status__samples strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.92rem;
+}
+
+.tanados-inline-status__samples ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--tanados-settings-muted);
+}
+
+.tanados-inline-status__samples li {
+  margin: 0 0 6px;
+}
+
+.tanados-inline-status__samples span {
+  color: rgba(247, 243, 255, 0.58);
+}
 
   .btn-item button,
   .theme-toggle-btn {

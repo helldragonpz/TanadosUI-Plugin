@@ -207,12 +207,12 @@ namespace Jellyfin.Plugin.TanadosUI.Controllers
                 }
 
                 var steps = new List<string>();
-                if (req.runDownloader && cfg.EnableTrailerDownloader)
+                if (req.runDownloader)
                 {
                     steps.Add(TrailerAutomationService.DownloaderStep);
                 }
 
-                if (req.runUrlNfo && cfg.EnableTrailerUrlNfo)
+                if (req.runUrlNfo)
                 {
                     steps.Add(TrailerAutomationService.UrlNfoStep);
                 }

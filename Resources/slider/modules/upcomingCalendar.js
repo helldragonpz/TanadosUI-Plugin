@@ -39,6 +39,23 @@ function text(value) {
   return String(value ?? "").trim();
 }
 
+function isProbablyVisible(element) {
+  if (!(element instanceof Element)) return false;
+  if (element.closest?.("[hidden], .hide")) return false;
+
+  try {
+    const style = window.getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+      return false;
+    }
+  } catch {}
+
+  const rect = typeof element.getBoundingClientRect === "function"
+    ? element.getBoundingClientRect()
+    : { width: 0, height: 0 };
+  return rect.width > 0 || rect.height > 0 || element.offsetParent !== null;
+}
+
 function isHomeHash(hash = window.location.hash || "") {
   const clean = text(hash).toLowerCase();
   return clean === "" || clean === "#" || clean.startsWith("#/home") || clean.startsWith("#/index");
@@ -499,7 +516,7 @@ function findMuiHomeTabsTargets() {
 
   for (const link of favoritesLinks) {
     const container = link.parentElement;
-    if (!container || seen.has(container)) continue;
+    if (!container || seen.has(container) || !isProbablyVisible(link) || !isProbablyVisible(container)) continue;
     seen.add(container);
     targets.push({ container, anchor: link });
   }
@@ -521,6 +538,7 @@ function findMuiHomeTabsTargets() {
 
   for (const [container, group] of grouped.entries()) {
     if (group.length < 2 || seen.has(container)) continue;
+    if (!isProbablyVisible(container) || !group.some((link) => isProbablyVisible(link))) continue;
     targets.push({ container, anchor: group[group.length - 1] });
   }
 
@@ -580,7 +598,7 @@ function refreshNavButtons() {
     return;
   }
 
-  const legacySliders = Array.from(document.querySelectorAll(".emby-tabs-slider"));
+  const legacySliders = Array.from(document.querySelectorAll(".emby-tabs-slider")).filter(isProbablyVisible);
   legacySliders.forEach((slider) => {
     let button = slider.querySelector(`.${NAV_BUTTON_CLASS}[${NAV_KIND_ATTR}="legacy"]`);
     if (!button) {

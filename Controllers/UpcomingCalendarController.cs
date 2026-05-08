@@ -7,6 +7,9 @@ using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Database.Implementations.Entities;
+using Jellyfin.Database.Implementations.Enums;
+using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jellyfin.Plugin.TanadosUI.Controllers;
@@ -18,10 +21,12 @@ public class UpcomingCalendarController : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IUserManager _users;
 
-    public UpcomingCalendarController(IHttpClientFactory httpClientFactory)
+    public UpcomingCalendarController(IHttpClientFactory httpClientFactory, IUserManager users)
     {
         _httpClientFactory = httpClientFactory;
+        _users = users;
     }
 
     private sealed record UpcomingFeedItem(
@@ -36,6 +41,7 @@ public class UpcomingCalendarController : ControllerBase
         string SeriesTitle);
 
     private sealed record SourceError(string Source, string Message);
+    public sealed record UpcomingSourceTestRequest(string Source, string Url, string ApiKey, int? Days);
 
     [HttpGet("feed")]
     public async Task<IActionResult> GetFeed(CancellationToken cancellationToken)
@@ -89,6 +95,106 @@ public class UpcomingCalendarController : ControllerBase
         });
     }
 
+    [HttpPost("test")]
+    public async Task<IActionResult> TestSource([FromBody] UpcomingSourceTestRequest? request, CancellationToken cancellationToken)
+    {
+        if (!TryGetAdminUser(out var errorResult))
+        {
+            return errorResult!;
+        }
+
+        var source = NormalizeSource(request?.Source);
+        if (string.IsNullOrWhiteSpace(source))
+        {
+            return BadRequest(new { ok = false, error = "A supported source is required." });
+        }
+
+        var url = NormalizeServerUrl(request?.Url);
+        var apiKey = NormalizeSecret(request?.ApiKey);
+        var days = Math.Clamp(request?.Days ?? 14, 1, 90);
+
+        try
+        {
+            var items = source == "sonarr"
+                ? await FetchSonarrItemsAsync(url, apiKey, days, cancellationToken).ConfigureAwait(false)
+                : await FetchRadarrItemsAsync(url, apiKey, days, cancellationToken).ConfigureAwait(false);
+
+            NoCache();
+            return Ok(new
+            {
+                ok = true,
+                reachable = true,
+                source = FormatSourceName(source),
+                itemCount = items.Count,
+                posterCount = items.Count(item => !string.IsNullOrWhiteSpace(item.PosterUrl)),
+                sampleItems = items
+                    .OrderBy(item => item.ReleaseDateUtc, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
+                    .Take(3)
+                    .Select(item => new
+                    {
+                        item.Title,
+                        item.Subtitle,
+                        item.Type,
+                        item.ReleaseDateUtc,
+                        hasPoster = !string.IsNullOrWhiteSpace(item.PosterUrl)
+                    })
+                    .ToList(),
+                warning = items.Count == 0
+                    ? $"{FormatSourceName(source)} responded successfully but returned no items for the selected date window."
+                    : string.Empty
+            });
+        }
+        catch (Exception ex)
+        {
+            NoCache();
+            return Ok(new
+            {
+                ok = false,
+                reachable = false,
+                source = FormatSourceName(source),
+                itemCount = 0,
+                posterCount = 0,
+                sampleItems = Array.Empty<object>(),
+                error = CleanErrorMessage(ex.Message, $"Unable to connect to {FormatSourceName(source)}.")
+            });
+        }
+    }
+
+    [HttpGet("poster")]
+    public async Task<IActionResult> GetPoster([FromQuery] string? source, [FromQuery] string? url, CancellationToken cancellationToken)
+    {
+        var cfg = TanadosUIPlugin.Instance?.Configuration
+                  ?? throw new InvalidOperationException("Plugin not available.");
+        var normalizedSource = NormalizeSource(source);
+        var rawUrl = (url ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalizedSource) || string.IsNullOrWhiteSpace(rawUrl))
+        {
+            return NotFound();
+        }
+
+        var sourceBaseUrl = normalizedSource == "sonarr" ? NormalizeServerUrl(cfg.SonarrUrl) : NormalizeServerUrl(cfg.RadarrUrl);
+        var sourceApiKey = normalizedSource == "sonarr" ? NormalizeSecret(cfg.SonarrApiKey) : NormalizeSecret(cfg.RadarrApiKey);
+        var targetUrl = ResolvePosterRequestUrl(sourceBaseUrl, rawUrl);
+        if (string.IsNullOrWhiteSpace(targetUrl))
+        {
+            return NotFound();
+        }
+
+        using var requestMessage = new HttpRequestMessage(HttpMethod.Get, targetUrl);
+        requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
+        if (ShouldForwardApiKey(targetUrl, sourceBaseUrl) && !string.IsNullOrWhiteSpace(sourceApiKey))
+        {
+            requestMessage.Headers.Add("X-Api-Key", sourceApiKey);
+        }
+
+        using var response = await SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
+        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+        var contentType = response.Content.Headers.ContentType?.ToString();
+        NoCache();
+        return File(bytes, string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType);
+    }
+
     private async Task<List<UpcomingFeedItem>> FetchSonarrItemsAsync(string? baseUrl, string? apiKey, int days, CancellationToken cancellationToken)
     {
         var url = NormalizeServerUrl(baseUrl);
@@ -139,7 +245,7 @@ public class UpcomingCalendarController : ControllerBase
                 Subtitle: string.Join(" • ", subtitleParts.Where(part => !string.IsNullOrWhiteSpace(part))),
                 Overview: GetString(element, "overview"),
                 ReleaseDateUtc: releaseDateUtc,
-                PosterUrl: GetPosterUrl(series),
+                PosterUrl: BuildPosterProxyUrl("sonarr", GetPosterCandidateUrl(series)),
                 SeriesTitle: seriesTitle
             ));
         }
@@ -181,7 +287,7 @@ public class UpcomingCalendarController : ControllerBase
                 Subtitle: GetString(element, "year"),
                 Overview: GetString(element, "overview"),
                 ReleaseDateUtc: releaseDateUtc,
-                PosterUrl: GetPosterUrl(element),
+                PosterUrl: BuildPosterProxyUrl("radarr", GetPosterCandidateUrl(element)),
                 SeriesTitle: string.Empty
             ));
         }
@@ -286,7 +392,7 @@ public class UpcomingCalendarController : ControllerBase
         return string.Empty;
     }
 
-    private static string GetPosterUrl(JsonElement element)
+    private static string GetPosterCandidateUrl(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty("images", out var images) || images.ValueKind != JsonValueKind.Array)
         {
@@ -306,6 +412,145 @@ public class UpcomingCalendarController : ControllerBase
         }
 
         return string.Empty;
+    }
+
+    private static string BuildPosterProxyUrl(string source, string candidateUrl)
+    {
+        var normalizedSource = NormalizeSource(source);
+        var raw = (candidateUrl ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(normalizedSource) || string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        return $"/TanadosUI/upcoming/poster?source={Uri.EscapeDataString(normalizedSource)}&url={Uri.EscapeDataString(raw)}";
+    }
+
+    private static string ResolvePosterRequestUrl(string baseUrl, string candidateUrl)
+    {
+        var raw = (candidateUrl ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        if (Uri.TryCreate(raw, UriKind.Absolute, out var absolute))
+        {
+            return absolute.ToString();
+        }
+
+        if (string.IsNullOrWhiteSpace(baseUrl) || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
+        {
+            return string.Empty;
+        }
+
+        if (raw.StartsWith("//", StringComparison.Ordinal))
+        {
+            return $"{baseUri.Scheme}:{raw}";
+        }
+
+        var basePath = baseUri.AbsolutePath.TrimEnd('/');
+        var authority = baseUri.GetLeftPart(UriPartial.Authority);
+        var rootedBase = string.IsNullOrWhiteSpace(basePath) || basePath == "/"
+            ? authority
+            : authority + basePath;
+
+        if (raw.StartsWith("/", StringComparison.Ordinal))
+        {
+            if (!string.IsNullOrWhiteSpace(basePath) &&
+                basePath != "/" &&
+                (raw.Equals(basePath, StringComparison.OrdinalIgnoreCase) ||
+                 raw.StartsWith(basePath + "/", StringComparison.OrdinalIgnoreCase)))
+            {
+                return authority + raw;
+            }
+
+            return rootedBase + raw;
+        }
+
+        return new Uri(new Uri(rootedBase.TrimEnd('/') + "/"), raw).ToString();
+    }
+
+    private static bool ShouldForwardApiKey(string targetUrl, string sourceBaseUrl)
+    {
+        if (!Uri.TryCreate(targetUrl, UriKind.Absolute, out var targetUri))
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(sourceBaseUrl, UriKind.Absolute, out var sourceUri))
+        {
+            return false;
+        }
+
+        return string.Equals(targetUri.Scheme, sourceUri.Scheme, StringComparison.OrdinalIgnoreCase) &&
+               string.Equals(targetUri.Host, sourceUri.Host, StringComparison.OrdinalIgnoreCase) &&
+               targetUri.Port == sourceUri.Port;
+    }
+
+    private bool TryGetAdminUser(out IActionResult? errorResult)
+    {
+        errorResult = null;
+        if (!TryGetRequestUserId(out var userId))
+        {
+            errorResult = Unauthorized(new { ok = false, error = "X-Emby-UserId is required." });
+            return false;
+        }
+
+        var user = _users.GetUserById(userId);
+        if (user is null)
+        {
+            errorResult = Unauthorized(new { ok = false, error = "User not found." });
+            return false;
+        }
+
+        if (!IsAdminUser(user))
+        {
+            errorResult = StatusCode(403, new { ok = false, error = "This action is only available to admin users." });
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsAdminUser(User? user)
+    {
+        if (user is null)
+        {
+            return false;
+        }
+
+        return user.Permissions.Any(permission =>
+            permission.Kind == PermissionKind.IsAdministrator && permission.Value);
+    }
+
+    private bool TryGetRequestUserId(out Guid userId)
+    {
+        var userIdHeader =
+            Request.Headers["X-Emby-UserId"].FirstOrDefault() ??
+            Request.Headers["X-MediaBrowser-UserId"].FirstOrDefault();
+        return Guid.TryParse(userIdHeader, out userId) && userId != Guid.Empty;
+    }
+
+    private static string NormalizeSource(string? value)
+    {
+        var raw = (value ?? string.Empty).Trim().ToLowerInvariant();
+        return raw switch
+        {
+            "sonarr" => "sonarr",
+            "radarr" => "radarr",
+            _ => string.Empty
+        };
+    }
+
+    private static string FormatSourceName(string source)
+    {
+        return NormalizeSource(source) switch
+        {
+            "sonarr" => "Sonarr",
+            "radarr" => "Radarr",
+            _ => "Source"
+        };
     }
 
     private void NoCache()

@@ -4,6 +4,7 @@ import {
   getRuntimeConfigSnapshot,
   subscribeRuntimeConfig
 } from "./runtimeConfig.js";
+import { faIconHtml } from "./faIcons.js";
 
 const DEFAULTS = getDefaultRuntimeConfig();
 const ROOT_ATTR = "data-tanados-ui-brand";
@@ -17,17 +18,29 @@ const BRAND_SURFACE_SELECTOR = [
   ".headerLogo",
   ".embyLogo",
   ".adminDrawerLogo",
+  ".mainDrawerLogo",
+  ".drawerLogo",
+  "[class*='drawerLogo']",
   ".skinHeader .headerLogo",
   ".skinHeader .pageTitleWithLogo",
-  ".skinHeader .pageTitle"
+  ".skinHeader .pageTitle",
+  ".mainDrawer .headerLogo",
+  ".mainDrawer .pageTitleWithLogo",
+  ".mainDrawer .pageTitle"
 ].join(", ");
 const BRAND_IMAGE_SELECTOR = [
   ".pageTitleWithLogo img",
   ".headerLogo img",
   ".embyLogo img",
   ".adminDrawerLogo img",
+  ".mainDrawerLogo img",
+  ".drawerLogo img",
+  "[class*='drawerLogo'] img",
   ".skinHeader .headerLogo img",
-  ".skinHeader .pageTitleWithLogo img"
+  ".skinHeader .pageTitleWithLogo img",
+  ".mainDrawer .headerLogo img",
+  ".mainDrawer .pageTitleWithLogo img",
+  ".mainDrawer img[alt*='jellyfin' i]"
 ].join(", ");
 const LOGIN_SURFACE_SELECTOR = [
   "#loginPage h1",
@@ -48,8 +61,38 @@ const TEXT_SELECTOR = [
   ".pageTitleWithLogo",
   "#loginPage .readOnlyContent h1",
   ".loginDisclaimerContainer h1",
-  ".adminDrawerLogo + .listItemBody"
+  ".adminDrawerLogo + .listItemBody",
+  ".mainDrawer .headerLogo",
+  ".mainDrawer .pageTitleWithLogo",
+  ".mainDrawer .pageTitle",
+  ".mainDrawer [class*='drawerLogo']"
 ].join(", ");
+const TOP_NAV_SELECTOR = [
+  ".skinHeader .emby-tab-button",
+  '.skinHeader a[href^="#/home?tab="]',
+  '.skinHeader a[href^="#/index?tab="]'
+].join(", ");
+const DRAWER_NAV_SELECTOR = [
+  ".mainDrawer .navMenuOption",
+  ".mainDrawer .listItem",
+  ".mainDrawer .mainDrawerButton",
+  ".mainDrawer a[href]",
+  ".mainDrawer button"
+].join(", ");
+const SHELL_ROLE_RULES = [
+  { key: "calendar", icon: "fa-solid fa-calendar-days", href: ["tab=calendar"], text: ["calendar", "upcoming", "календар", "предстоящ"] },
+  { key: "watchlist", icon: "fa-solid fa-bookmark", href: ["tab=watchlist"], text: ["watchlist", "списък"] },
+  { key: "favorites", icon: "fa-solid fa-heart", href: ["tab=1", "/favorites"], text: ["favorite", "favourite", "любим"] },
+  { key: "home", icon: "fa-solid fa-house", href: ["tab=0", "#/home", "#/index"], text: ["home", "начало"] },
+  { key: "movies", icon: "fa-solid fa-film", href: ["/movies"], text: ["movie", "movies", "film", "films", "филм"] },
+  { key: "series", icon: "fa-solid fa-tv", href: ["/tv", "/shows", "/series"], text: ["series", "shows", "tv", "сериал"] },
+  { key: "music", icon: "fa-solid fa-compact-disc", href: ["/music", "/audio"], text: ["music", "audio", "музика"] },
+  { key: "search", icon: "fa-solid fa-magnifying-glass", href: ["/search"], text: ["search", "търсене"] },
+  { key: "users", icon: "fa-solid fa-users", href: ["/user", "/profile"], text: ["users", "user", "profile", "потреб"] },
+  { key: "settings", icon: "fa-solid fa-sliders", href: ["/dashboard", "/plugins", "/configuration"], text: ["settings", "dashboard", "plugins", "admin", "настрой", "табло", "плъгин"] },
+  { key: "collections", icon: "fa-solid fa-layer-group", href: ["/library", "/collection"], text: ["library", "collection", "folder", "колекц", "библиот"] },
+  { key: "live", icon: "fa-solid fa-satellite-dish", href: ["/livetv", "/live"], text: ["live tv", "livetv", "телев"] }
+];
 
 let brandingObserver = null;
 let applyTimer = 0;
@@ -85,6 +128,8 @@ function applyRootRuntime(runtime = currentRuntime()) {
   root.setAttribute(ROOT_ATTR, "1");
   root.setAttribute("data-tanados-header-logo", runtime.showHeaderLogo === false ? "0" : "1");
   root.setAttribute("data-tanados-header-logo-compact", runtime.useCompactHeaderLogo === true ? "1" : "0");
+  root.setAttribute("data-tanados-show-native-home-tabs", runtime.showNativeHomeTabs === false ? "0" : "1");
+  root.setAttribute("data-tanados-show-watchlist-top-nav", runtime.showWatchlistInTopNav === false ? "0" : "1");
   root.style.setProperty("--tanados-runtime-logo-url", `url("${resolveHeaderLogoUrl(runtime)}")`);
   root.style.setProperty("--tanados-runtime-login-logo-url", `url("${resolveLoginLogoUrl(runtime)}")`);
   root.style.setProperty("--tanados-runtime-favicon-url", `url("${resolveFaviconUrl(runtime)}")`);
@@ -224,6 +269,100 @@ function applyBrandText(runtime = currentRuntime()) {
   });
 }
 
+function getShellRole(el) {
+  if (!(el instanceof HTMLElement)) return null;
+  const href = text(el.getAttribute("href")).toLowerCase();
+  const label = text(el.dataset.tanadosOriginalLabel || el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent).toLowerCase();
+
+  for (const rule of SHELL_ROLE_RULES) {
+    if (rule.href?.some((needle) => href.includes(needle))) return rule;
+    if (rule.text?.some((needle) => label.includes(needle))) return rule;
+  }
+
+  return null;
+}
+
+function ensureOriginalLabel(el) {
+  if (!(el instanceof HTMLElement)) return "";
+  if (!text(el.dataset.tanadosOriginalLabel)) {
+    el.dataset.tanadosOriginalLabel =
+      text(el.getAttribute("aria-label")) ||
+      text(el.getAttribute("title")) ||
+      text(el.textContent);
+  }
+  return text(el.dataset.tanadosOriginalLabel);
+}
+
+function decorateTopNavTabs() {
+  document.querySelectorAll(TOP_NAV_SELECTOR).forEach((el) => {
+    if (!(el instanceof HTMLElement)) return;
+    if (/TanadosUI-(?:watchlist|upcoming|nav)-/.test(el.className)) return;
+
+    const role = getShellRole(el);
+    const label = ensureOriginalLabel(el);
+    if (!role || !label) return;
+
+    el.dataset.tanadosShellRole = role.key;
+
+    const hasManagedMarkup =
+      !!el.querySelector(":scope > .TanadosUI-shell-icon") ||
+      !!el.querySelector(":scope > .TanadosUI-shell-label");
+    const hasComplexChildren = Array.from(el.children).some((child) =>
+      !(child instanceof HTMLElement) ||
+      (!child.classList.contains("TanadosUI-shell-icon") && !child.classList.contains("TanadosUI-shell-label"))
+    );
+    if (hasComplexChildren && !hasManagedMarkup) return;
+
+    let icon = el.querySelector(":scope > .TanadosUI-shell-icon");
+    let labelEl = el.querySelector(":scope > .TanadosUI-shell-label");
+    if (!icon || !labelEl) {
+      el.replaceChildren();
+      icon = document.createElement("span");
+      icon.className = "TanadosUI-shell-icon";
+      icon.setAttribute("aria-hidden", "true");
+      labelEl = document.createElement("span");
+      labelEl.className = "TanadosUI-shell-label";
+      el.append(icon, labelEl);
+    }
+
+    icon.innerHTML = faIconHtml(role.icon, "TanadosUI-shell-icon-fa");
+    labelEl.textContent = label;
+  });
+}
+
+function decorateDrawerNavigation() {
+  document.querySelectorAll(DRAWER_NAV_SELECTOR).forEach((el) => {
+    if (!(el instanceof HTMLElement)) return;
+    if (/(?:logo|brand)/i.test(el.className)) return;
+
+    const role = getShellRole(el);
+    if (!role) return;
+
+    el.dataset.tanadosShellRole = role.key;
+
+    const existingIcon = el.querySelector(":scope > .listItemIcon, :scope > .TanadosUI-drawer-icon, :scope > .TanadosUI-shell-icon, :scope > .fa-solid, :scope > .fa-regular, :scope > .fa-brands");
+    if (existingIcon) return;
+
+    const label = ensureOriginalLabel(el);
+    if (!label) return;
+
+    const icon = document.createElement("span");
+    icon.className = "TanadosUI-drawer-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = faIconHtml(role.icon, "TanadosUI-shell-icon-fa");
+
+    if (!el.children.length) {
+      const labelEl = document.createElement("span");
+      labelEl.className = "TanadosUI-shell-label";
+      labelEl.textContent = label;
+      el.replaceChildren(icon, labelEl);
+      return;
+    }
+
+    el.insertBefore(icon, el.firstChild);
+  });
+}
+
 function applyBranding(runtime = currentRuntime()) {
   applyRootRuntime(runtime);
   applyFavicons(runtime);
@@ -231,6 +370,8 @@ function applyBranding(runtime = currentRuntime()) {
   applyHeaderBranding(runtime);
   applyLoginBranding(runtime);
   applyBrandText(runtime);
+  decorateTopNavTabs();
+  decorateDrawerNavigation();
 }
 
 function queueApplyBranding(runtime = currentRuntime(), delayMs = 48) {

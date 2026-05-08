@@ -51,8 +51,8 @@ const UPDATE_BANNER_KEY      = () => storageKey("updateBanner");
 const UPDATE_TOAST_SHOWN_KEY = () => storageKey("updateToastShown");
 const UPDATE_TOAST_INFO_KEY = () => storageKey("updateToastInfo");
 const UPDATE_LIST_ID = (latest) => `update:${latest}`;
-const HOVER_OPEN_DELAY  = 150;
-const HOVER_CLOSE_DELAY = 200;
+const HOVER_OPEN_DELAY  = 180;
+const HOVER_CLOSE_DELAY = 320;
 const CSS_READY_TIMEOUT_MS = 2000;
 const MAX_RECENT_TOAST_KEYS = 500;
 const CREATED_TS_CACHE_MAX = 2000;
@@ -75,6 +75,7 @@ const pollCtl = {
 let notifRenderGen = 0;
 let __hoverOpenTimer  = null;
 let __hoverCloseTimer = null;
+let __notifHoverState = { button: false, panel: false };
 let recentToastMap = new Map();
 let notifState = {
   list: [],
@@ -133,36 +134,71 @@ function setupNotifHover() {
   const modal = document.getElementById('jfNotifModal');
   const panel = modal?.querySelector('.jf-notif-panel');
   if (!btn || !modal || !panel) return;
-  if (btn.__notifHoverBound) return;
-  btn.__notifHoverBound = true;
 
   const openLater = () => {
     clearHoverTimers();
-    __hoverOpenTimer = setTimeout(() => { openModal(); }, HOVER_OPEN_DELAY);
+    __hoverOpenTimer = setTimeout(() => {
+      if (__notifHoverState.button || __notifHoverState.panel) {
+        openModal();
+      }
+    }, HOVER_OPEN_DELAY);
   };
   const closeLater = () => {
     clearHoverTimers();
-    __hoverCloseTimer = setTimeout(() => { closeModal(); }, HOVER_CLOSE_DELAY);
+    __hoverCloseTimer = setTimeout(() => {
+      if (!__notifHoverState.button && !__notifHoverState.panel) {
+        closeModal();
+      }
+    }, HOVER_CLOSE_DELAY);
   };
   const cancelClose = () => {
     if (__hoverCloseTimer) { clearTimeout(__hoverCloseTimer); __hoverCloseTimer = null; }
   };
 
-  btn.addEventListener('mouseenter', () => {
-    openLater();
-  });
-  const leaveHandler = (ev) => {
-    const to = ev.relatedTarget;
-    if (insideNotifArea(to)) {
+  if (!btn.__notifHoverEnterBound) {
+    btn.__notifHoverEnterBound = true;
+    btn.addEventListener('pointerenter', () => {
+      __notifHoverState.button = true;
       cancelClose();
-    } else {
-      closeLater();
-    }
-  };
+      if (!notifState.isModalOpen) {
+        openLater();
+      }
+    });
+  }
 
-  btn.addEventListener('mouseleave', leaveHandler);
-  panel.addEventListener('mouseleave', leaveHandler);
-  panel.addEventListener('mouseenter', cancelClose);
+  if (!btn.__notifHoverLeaveBound) {
+    btn.__notifHoverLeaveBound = true;
+    btn.addEventListener('pointerleave', (ev) => {
+      const to = ev.relatedTarget;
+      __notifHoverState.button = false;
+      if (insideNotifArea(to)) {
+        cancelClose();
+        return;
+      }
+      closeLater();
+    });
+  }
+
+  if (!panel.__notifHoverEnterBound) {
+    panel.__notifHoverEnterBound = true;
+    panel.addEventListener('pointerenter', () => {
+      __notifHoverState.panel = true;
+      cancelClose();
+    });
+  }
+
+  if (!panel.__notifHoverLeaveBound) {
+    panel.__notifHoverLeaveBound = true;
+    panel.addEventListener('pointerleave', (ev) => {
+      const to = ev.relatedTarget;
+      __notifHoverState.panel = false;
+      if (insideNotifArea(to)) {
+        cancelClose();
+        return;
+      }
+      closeLater();
+    });
+  }
 }
 
 function findHeaderContainer() {
@@ -1056,6 +1092,11 @@ function openModal() {
   clearHoverTimers();
   const m = document.querySelector("#jfNotifModal");
   if (!m) return;
+  if (notifState.isModalOpen && m.classList.contains("open")) {
+    renderNotifications();
+    if (liveConfig.enableRenderResume !== false) renderResume();
+    return;
+  }
   syncResumeSectionVisibility();
   m.hidden = false;
   m.removeAttribute("aria-hidden");
@@ -1071,9 +1112,10 @@ function openModal() {
 }
 
  function closeModal() {
-   clearHoverTimers();
+  __notifHoverState = { button: false, panel: false };
+  clearHoverTimers();
   const m = document.querySelector("#jfNotifModal");
-  if (m) {
+  if (m?.classList.contains("open")) {
     m.classList.remove("open");
   }
   notifState.isModalOpen = false;

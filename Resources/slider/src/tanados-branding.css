@@ -14,6 +14,10 @@
   --tanados-text: #f7f4ff;
   --tanados-text-muted: rgba(247, 244, 255, 0.72);
   --tanados-shadow: 0 24px 80px rgba(2, 0, 12, 0.55);
+  --tanados-shell-bg: linear-gradient(135deg, rgba(11, 7, 22, 0.56), rgba(16, 11, 31, 0.76));
+  --tanados-shell-border: rgba(255, 255, 255, 0.14);
+  --tanados-shell-highlight: rgba(242, 198, 107, 0.18);
+  --tanados-shell-blur: blur(22px) saturate(150%);
 }
 
 html[data-tanados-ui-brand="1"] body,
@@ -48,13 +52,112 @@ html[data-tanados-ui-brand="1"] .skinHeader,
 html[data-tanados-ui-brand="1"] .mainDrawer,
 html[data-tanados-ui-brand="1"] .dialog,
 html[data-tanados-ui-brand="1"] .drawer-open .mainDrawer {
-  background:
-    linear-gradient(135deg, rgba(14, 8, 25, 0.95), rgba(17, 10, 30, 0.92)) !important;
+  background: var(--tanados-shell-bg) !important;
+  backdrop-filter: var(--tanados-shell-blur);
+  -webkit-backdrop-filter: var(--tanados-shell-blur);
   box-shadow: var(--tanados-shadow) !important;
+  isolation: isolate;
+  position: relative;
+}
+
+html[data-tanados-ui-brand="1"] .skinHeader {
+  background:
+    linear-gradient(180deg, rgba(10, 7, 20, 0.62), rgba(17, 11, 30, 0.48)) !important;
+  border-bottom: 1px solid var(--tanados-shell-border) !important;
+  box-shadow:
+    0 18px 42px rgba(3, 1, 10, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+html[data-tanados-ui-brand="1"] .skinHeader::before,
+html[data-tanados-ui-brand="1"] .mainDrawer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(242, 198, 107, 0.12), transparent 36%);
+  opacity: 0.95;
 }
 
 html[data-tanados-ui-brand="1"] .mainDrawer {
-  border-right: 1px solid var(--tanados-border) !important;
+  border-right: 1px solid var(--tanados-shell-border) !important;
+  box-shadow:
+    0 26px 80px rgba(2, 0, 12, 0.52),
+    inset -1px 0 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOption,
+html[data-tanados-ui-brand="1"] .mainDrawer .listItem,
+html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawerButton,
+html[data-tanados-ui-brand="1"] .mainDrawer a[href],
+html[data-tanados-ui-brand="1"] .mainDrawer button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.78rem;
+  min-height: 46px;
+  margin: 0.22rem 0.7rem;
+  padding: 0.72rem 0.95rem !important;
+  border-radius: 18px !important;
+  border: 1px solid transparent;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.018)) !important;
+  color: var(--tanados-text-muted) !important;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, box-shadow 140ms ease, color 140ms ease;
+}
+
+html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOption:hover,
+html[data-tanados-ui-brand="1"] .mainDrawer .listItem:hover,
+html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawerButton:hover,
+html[data-tanados-ui-brand="1"] .mainDrawer a[href]:hover,
+html[data-tanados-ui-brand="1"] .mainDrawer button:hover {
+  color: #fff !important;
+  border-color: rgba(242, 198, 107, 0.18) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.028)) !important;
+  box-shadow: 0 16px 30px rgba(24, 13, 62, 0.24), inset 0 0 0 1px rgba(242, 198, 107, 0.06) !important;
+  transform: translateX(2px);
+}
+
+html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOption-selected,
+html[data-tanados-ui-brand="1"] .mainDrawer .selected,
+html[data-tanados-ui-brand="1"] .mainDrawer [aria-selected="true"] {
+  color: #fff !important;
+  border-color: rgba(242, 198, 107, 0.26) !important;
+  background: linear-gradient(135deg, rgba(111, 67, 243, 0.28), rgba(47, 107, 255, 0.18)) !important;
+  box-shadow: 0 18px 34px rgba(34, 17, 79, 0.34), 0 0 0 1px rgba(242, 198, 107, 0.08) inset !important;
+}
+
+html[data-tanados-ui-brand="1"] .mainDrawer .listItemIcon,
+html[data-tanados-ui-brand="1"] .TanadosUI-drawer-icon,
+html[data-tanados-ui-brand="1"] .TanadosUI-shell-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(111, 67, 243, 0.28), rgba(47, 107, 255, 0.16));
+  color: var(--tanados-runtime-accent) !important;
+  box-shadow: 0 12px 24px rgba(18, 8, 46, 0.22), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+html[data-tanados-ui-brand="1"] .TanadosUI-shell-icon-fa,
+html[data-tanados-ui-brand="1"] .mainDrawer .listItemIcon i,
+html[data-tanados-ui-brand="1"] .mainDrawer .listItemIcon svg {
+  color: inherit !important;
+}
+
+html[data-tanados-ui-brand="1"] .TanadosUI-shell-label {
+  min-width: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+html[data-tanados-ui-brand="1"] .mainDrawer [data-tanados-brand="surface"] {
+  margin: 0.85rem 0.95rem 1rem !important;
 }
 
 html[data-tanados-ui-brand="1"] .paper-icon-button-light:hover,
@@ -89,6 +192,9 @@ html[data-tanados-ui-brand="1"] .pageTitleWithLogo,
 html[data-tanados-ui-brand="1"] .headerLogo,
 html[data-tanados-ui-brand="1"] .embyLogo,
 html[data-tanados-ui-brand="1"] .adminDrawerLogo,
+html[data-tanados-ui-brand="1"] .mainDrawerLogo,
+html[data-tanados-ui-brand="1"] .drawerLogo,
+html[data-tanados-ui-brand="1"] [class*="drawerLogo"],
 html[data-tanados-ui-brand="1"] [data-tanados-brand="surface"] {
   background-image: var(--tanados-runtime-logo-url) !important;
   background-repeat: no-repeat !important;
@@ -106,7 +212,10 @@ html[data-tanados-ui-brand="1"] [data-tanados-logo-compact="1"] {
 
 html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .pageTitleWithLogo,
 html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .headerLogo,
-html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .embyLogo {
+html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .embyLogo,
+html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .mainDrawerLogo,
+html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .drawerLogo,
+html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] [class*="drawerLogo"] {
   background-image: none !important;
   color: var(--tanados-text) !important;
   min-width: auto !important;
@@ -115,7 +224,10 @@ html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .embyLogo {
 html[data-tanados-ui-brand="1"] .pageTitleWithLogo::before,
 html[data-tanados-ui-brand="1"] .headerLogo::before,
 html[data-tanados-ui-brand="1"] .embyLogo::before,
-html[data-tanados-ui-brand="1"] .adminDrawerLogo::before {
+html[data-tanados-ui-brand="1"] .adminDrawerLogo::before,
+html[data-tanados-ui-brand="1"] .mainDrawerLogo::before,
+html[data-tanados-ui-brand="1"] .drawerLogo::before,
+html[data-tanados-ui-brand="1"] [class*="drawerLogo"]::before {
   content: "" !important;
 }
 
@@ -123,6 +235,9 @@ html[data-tanados-ui-brand="1"] .pageTitleWithLogo img,
 html[data-tanados-ui-brand="1"] .headerLogo img,
 html[data-tanados-ui-brand="1"] .embyLogo img,
 html[data-tanados-ui-brand="1"] .adminDrawerLogo img,
+html[data-tanados-ui-brand="1"] .mainDrawerLogo img,
+html[data-tanados-ui-brand="1"] .drawerLogo img,
+html[data-tanados-ui-brand="1"] [class*="drawerLogo"] img,
 html[data-tanados-ui-brand="1"] img[data-tanados-brand="image"] {
   object-fit: contain !important;
   max-width: 220px !important;
@@ -133,6 +248,7 @@ html[data-tanados-ui-brand="1"] .skinHeader .emby-tabs-slider,
 html[data-tanados-ui-brand="1"] .skinHeader .MuiTabs-scroller,
 html[data-tanados-ui-brand="1"] .skinHeader .MuiTabs-flexContainer {
   gap: 0.45rem;
+  align-items: center;
 }
 
 html[data-tanados-ui-brand="1"] .skinHeader .emby-tab-button,
@@ -149,12 +265,13 @@ html[data-tanados-ui-brand="1"] .TanadosUI-nav-button {
   min-height: 38px;
   padding: 0.55rem 1rem !important;
   border-radius: 999px !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.028)) !important;
   color: var(--tanados-text-muted) !important;
   font-weight: 700 !important;
   letter-spacing: 0.01em;
   text-transform: none !important;
+  box-shadow: 0 8px 24px rgba(8, 4, 22, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.04) !important;
   transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease, color 140ms ease, background 140ms ease;
 }
 
@@ -187,6 +304,17 @@ html[data-tanados-ui-brand="1"] .TanadosUI-nav-icon {
   align-items: center;
   justify-content: center;
   color: inherit;
+}
+
+html[data-tanados-ui-brand="1"][data-tanados-show-native-home-tabs="0"] .skinHeader .emby-tab-button:not(.TanadosUI-watchlist-nav-button):not(.TanadosUI-upcoming-nav-button):not(.TanadosUI-nav-button),
+html[data-tanados-ui-brand="1"][data-tanados-show-native-home-tabs="0"] .skinHeader a[href^="#/home?tab="]:not(.TanadosUI-watchlist-nav-button):not(.TanadosUI-upcoming-nav-button):not(.TanadosUI-nav-button):not(.TanadosUI-watchlist-nav-link),
+html[data-tanados-ui-brand="1"][data-tanados-show-native-home-tabs="0"] .skinHeader a[href^="#/index?tab="]:not(.TanadosUI-watchlist-nav-button):not(.TanadosUI-upcoming-nav-button):not(.TanadosUI-nav-button):not(.TanadosUI-watchlist-nav-link) {
+  display: none !important;
+}
+
+html[data-tanados-ui-brand="1"][data-tanados-show-watchlist-top-nav="0"] .TanadosUI-watchlist-nav-button,
+html[data-tanados-ui-brand="1"][data-tanados-show-watchlist-top-nav="0"] .TanadosUI-watchlist-nav-link {
+  display: none !important;
 }
 
 html[data-tanados-ui-brand="1"] #loginPage,

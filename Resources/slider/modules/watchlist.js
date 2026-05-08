@@ -5,6 +5,7 @@ import { withServer } from "./jfUrl.js";
 import { ensureStudioHubLogoFromTmdb, ensureStudioHubManualEntry, JMS_STUDIO_HUB_MANUAL_ENTRY_ADDED_EVENT } from "./studioHubsShared.js";
 import { showNotification } from "./player/ui/notification.js";
 import { closeDetailsModalIfLoaded } from "./detailsModalLoader.js";
+import { fetchRuntimeConfig, getRuntimeConfigSnapshot, subscribeRuntimeConfig } from "./runtimeConfig.js";
 
 const WATCHLIST_ENDPOINT = "/Plugins/TanadosUI/watchlist";
 export const WATCHLIST_MODAL_ID = "TanadosUI-watchlist-modal-root";
@@ -113,8 +114,25 @@ function cfg() {
   return getConfig?.() || {};
 }
 
-function shouldShowWatchlistTabsSliderButton() {
-  return cfg()?.watchlistTabsSliderEnabled !== false;
+function isProbablyVisible(element) {
+  if (!(element instanceof Element)) return false;
+  if (element.closest?.("[hidden], .hide")) return false;
+
+  try {
+    const style = window.getComputedStyle(element);
+    if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") {
+      return false;
+    }
+  } catch {}
+
+  const rect = typeof element.getBoundingClientRect === "function"
+    ? element.getBoundingClientRect()
+    : { width: 0, height: 0 };
+  return rect.width > 0 || rect.height > 0 || element.offsetParent !== null;
+}
+
+function shouldShowWatchlistTabsSliderButton(runtime = getRuntimeConfigSnapshot()) {
+  return runtime?.showWatchlistInTopNav !== false && cfg()?.watchlistTabsSliderEnabled !== false;
 }
 
 function shouldAutoRemovePlayedFromWatchlist() {
@@ -541,7 +559,7 @@ function findMuiHomeTabsTargets() {
 
   for (const link of favoritesLinks) {
     const container = link.parentElement;
-    if (!container || seen.has(container)) continue;
+    if (!container || seen.has(container) || !isProbablyVisible(link) || !isProbablyVisible(container)) continue;
     seen.add(container);
     targets.push({ container, anchor: link });
   }
@@ -564,6 +582,7 @@ function findMuiHomeTabsTargets() {
   for (const [container, links] of grouped.entries()) {
     if (!links.length || seen.has(container)) continue;
     if (links.length < 2) continue;
+    if (!isProbablyVisible(container) || !links.some((link) => isProbablyVisible(link))) continue;
     targets.push({ container, anchor: links[links.length - 1] });
   }
 
@@ -6697,7 +6716,7 @@ function createMuiTabsSliderButton() {
 function refreshTabsSliderButton() {
   tabsSliderRefreshQueued = false;
   ensureStyles();
-  const sliders = Array.from(document.querySelectorAll(".emby-tabs-slider"));
+  const sliders = Array.from(document.querySelectorAll(".emby-tabs-slider")).filter(isProbablyVisible);
   const muiTargets = findMuiHomeTabsTargets();
   if (!sliders.length && !muiTargets.length) return false;
 
@@ -6901,6 +6920,10 @@ function bootstrapWatchlistUi() {
   } catch {}
   try {
     installWatchlistTabsButton();
+  } catch {}
+  try {
+    void fetchRuntimeConfig().then(() => scheduleTabsSliderRefreshSequence()).catch(() => {});
+    subscribeRuntimeConfig(() => scheduleTabsSliderRefreshSequence());
   } catch {}
 }
 

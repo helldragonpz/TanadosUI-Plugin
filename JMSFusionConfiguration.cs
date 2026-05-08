@@ -182,6 +182,12 @@ namespace Jellyfin.Plugin.TanadosUI
         [JsonPropertyName("useCompactHeaderLogo")]
         public bool UseCompactHeaderLogo { get; set; } = false;
 
+        [JsonPropertyName("showNativeHomeTabs")]
+        public bool ShowNativeHomeTabs { get; set; } = true;
+
+        [JsonPropertyName("showWatchlistInTopNav")]
+        public bool ShowWatchlistInTopNav { get; set; } = true;
+
         [JsonPropertyName("enableSonarrIntegration")]
         public bool EnableSonarrIntegration { get; set; } = false;
 
