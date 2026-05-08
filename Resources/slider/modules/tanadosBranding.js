@@ -23,10 +23,7 @@ const BRAND_SURFACE_SELECTOR = [
   "[class*='drawerLogo']",
   ".skinHeader .headerLogo",
   ".skinHeader .pageTitleWithLogo",
-  ".skinHeader .pageTitle",
-  ".mainDrawer .headerLogo",
-  ".mainDrawer .pageTitleWithLogo",
-  ".mainDrawer .pageTitle"
+  ".skinHeader .pageTitle"
 ].join(", ");
 const BRAND_IMAGE_SELECTOR = [
   ".pageTitleWithLogo img",
@@ -37,10 +34,7 @@ const BRAND_IMAGE_SELECTOR = [
   ".drawerLogo img",
   "[class*='drawerLogo'] img",
   ".skinHeader .headerLogo img",
-  ".skinHeader .pageTitleWithLogo img",
-  ".mainDrawer .headerLogo img",
-  ".mainDrawer .pageTitleWithLogo img",
-  ".mainDrawer img[alt*='jellyfin' i]"
+  ".skinHeader .pageTitleWithLogo img"
 ].join(", ");
 const LOGIN_SURFACE_SELECTOR = [
   "#loginPage h1",
@@ -62,9 +56,6 @@ const TEXT_SELECTOR = [
   "#loginPage .readOnlyContent h1",
   ".loginDisclaimerContainer h1",
   ".adminDrawerLogo + .listItemBody",
-  ".mainDrawer .headerLogo",
-  ".mainDrawer .pageTitleWithLogo",
-  ".mainDrawer .pageTitle",
   ".mainDrawer [class*='drawerLogo']"
 ].join(", ");
 const TOP_NAV_SELECTOR = [
@@ -74,10 +65,9 @@ const TOP_NAV_SELECTOR = [
 ].join(", ");
 const DRAWER_NAV_SELECTOR = [
   ".mainDrawer .navMenuOption",
-  ".mainDrawer .listItem",
   ".mainDrawer .mainDrawerButton",
-  ".mainDrawer a[href]",
-  ".mainDrawer button"
+  ".mainDrawer .listItemButton",
+  ".mainDrawer [role='menuitem']"
 ].join(", ");
 const SHELL_ROLE_RULES = [
   { key: "calendar", icon: "fa-solid fa-calendar-days", href: ["tab=calendar"], text: ["calendar", "upcoming", "календар", "предстоящ"] },

@@ -89,10 +89,9 @@ html[data-tanados-ui-brand="1"] .mainDrawer {
 }
 
 html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOption,
-html[data-tanados-ui-brand="1"] .mainDrawer .listItem,
 html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawerButton,
-html[data-tanados-ui-brand="1"] .mainDrawer a[href],
-html[data-tanados-ui-brand="1"] .mainDrawer button {
+html[data-tanados-ui-brand="1"] .mainDrawer .listItemButton,
+html[data-tanados-ui-brand="1"] .mainDrawer [role="menuitem"] {
   position: relative;
   display: flex;
   align-items: center;
@@ -108,10 +107,9 @@ html[data-tanados-ui-brand="1"] .mainDrawer button {
 }
 
 html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOption:hover,
-html[data-tanados-ui-brand="1"] .mainDrawer .listItem:hover,
 html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawerButton:hover,
-html[data-tanados-ui-brand="1"] .mainDrawer a[href]:hover,
-html[data-tanados-ui-brand="1"] .mainDrawer button:hover {
+html[data-tanados-ui-brand="1"] .mainDrawer .listItemButton:hover,
+html[data-tanados-ui-brand="1"] .mainDrawer [role="menuitem"]:hover {
   color: #fff !important;
   border-color: rgba(242, 198, 107, 0.18) !important;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.028)) !important;
@@ -120,8 +118,10 @@ html[data-tanados-ui-brand="1"] .mainDrawer button:hover {
 }
 
 html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOption-selected,
-html[data-tanados-ui-brand="1"] .mainDrawer .selected,
-html[data-tanados-ui-brand="1"] .mainDrawer [aria-selected="true"] {
+html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawerButton.selected,
+html[data-tanados-ui-brand="1"] .mainDrawer .listItemButton.selected,
+html[data-tanados-ui-brand="1"] .mainDrawer [role="menuitem"][aria-selected="true"],
+html[data-tanados-ui-brand="1"] .mainDrawer [aria-current="page"] {
   color: #fff !important;
   border-color: rgba(242, 198, 107, 0.26) !important;
   background: linear-gradient(135deg, rgba(111, 67, 243, 0.28), rgba(47, 107, 255, 0.18)) !important;

@@ -140,9 +140,13 @@ const audioItemDetails = {
     Id: "movie-1",
     Name: "Smoke Movie One",
     Type: "Movie",
-    MediaStreams: [
-      { Type: "Audio", Language: "bg", IsDefault: true },
-      { Type: "Audio", Language: "en" }
+    MediaSources: [
+      {
+        MediaStreams: [
+          { Type: "Audio", Language: "bg", IsDefault: true },
+          { Type: "Audio", Language: "en" }
+        ]
+      }
     ]
   },
   "movie-2": {
@@ -300,6 +304,26 @@ async function installApiRoutes(page, { isAdmin = true, runtimeOverride = {}, ad
 
 async function installRecentRowsRoutes(page) {
   await stubJson(page, "**/Users/user-1/Views", homeViews);
+  await page.route("**/Items/*", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+    const itemId = pathname.split("/").pop();
+    const payload = audioItemDetails[itemId];
+
+    if (!payload) {
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify({ Message: "Not found" })
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json; charset=utf-8",
+      body: JSON.stringify(payload)
+    });
+  });
   await page.route("**/Users/user-1/Items/*", async (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const itemId = pathname.split("/").pop();

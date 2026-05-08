@@ -38,6 +38,7 @@ public class UpcomingCalendarController : ControllerBase
         string Overview,
         string ReleaseDateUtc,
         string PosterUrl,
+        string PosterFallbackUrl,
         string SeriesTitle);
 
     private sealed record SourceError(string Source, string Message);
@@ -222,6 +223,7 @@ public class UpcomingCalendarController : ControllerBase
             var episodeTitle = GetString(element, "title");
             var releaseDateUtc = PickDateString(element, "airDateUtc", "airDate");
             if (string.IsNullOrWhiteSpace(releaseDateUtc)) continue;
+            var (posterCandidateUrl, posterFallbackUrl) = GetPosterCandidateUrls(series);
 
             var seasonNumber = GetInt(element, "seasonNumber");
             var episodeNumber = GetInt(element, "episodeNumber");
@@ -245,7 +247,10 @@ public class UpcomingCalendarController : ControllerBase
                 Subtitle: string.Join(" • ", subtitleParts.Where(part => !string.IsNullOrWhiteSpace(part))),
                 Overview: GetString(element, "overview"),
                 ReleaseDateUtc: releaseDateUtc,
-                PosterUrl: BuildPosterProxyUrl("sonarr", GetPosterCandidateUrl(series)),
+                PosterUrl: !string.IsNullOrWhiteSpace(posterCandidateUrl)
+                    ? BuildPosterProxyUrl("sonarr", posterCandidateUrl)
+                    : posterFallbackUrl,
+                PosterFallbackUrl: posterFallbackUrl,
                 SeriesTitle: seriesTitle
             ));
         }
@@ -278,6 +283,7 @@ public class UpcomingCalendarController : ControllerBase
             var title = GetString(element, "title");
             var releaseDateUtc = PickDateString(element, "physicalRelease", "digitalRelease", "inCinemas", "premiereDate");
             if (string.IsNullOrWhiteSpace(releaseDateUtc) || string.IsNullOrWhiteSpace(title)) continue;
+            var (posterCandidateUrl, posterFallbackUrl) = GetPosterCandidateUrls(element);
 
             items.Add(new UpcomingFeedItem(
                 Id: $"radarr:{GetInt(element, "id")}",
@@ -287,7 +293,10 @@ public class UpcomingCalendarController : ControllerBase
                 Subtitle: GetString(element, "year"),
                 Overview: GetString(element, "overview"),
                 ReleaseDateUtc: releaseDateUtc,
-                PosterUrl: BuildPosterProxyUrl("radarr", GetPosterCandidateUrl(element)),
+                PosterUrl: !string.IsNullOrWhiteSpace(posterCandidateUrl)
+                    ? BuildPosterProxyUrl("radarr", posterCandidateUrl)
+                    : posterFallbackUrl,
+                PosterFallbackUrl: posterFallbackUrl,
                 SeriesTitle: string.Empty
             ));
         }
@@ -392,26 +401,60 @@ public class UpcomingCalendarController : ControllerBase
         return string.Empty;
     }
 
-    private static string GetPosterCandidateUrl(JsonElement element)
+    private static (string PreferredUrl, string FallbackUrl) GetPosterCandidateUrls(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty("images", out var images) || images.ValueKind != JsonValueKind.Array)
         {
-            return string.Empty;
+            return (string.Empty, string.Empty);
         }
 
+        var localUrl = string.Empty;
+        var remoteUrl = string.Empty;
         foreach (var image in images.EnumerateArray())
         {
             var coverType = GetString(image, "coverType");
             if (!string.Equals(coverType, "poster", StringComparison.OrdinalIgnoreCase)) continue;
 
-            var remoteUrl = GetString(image, "remoteUrl");
-            if (!string.IsNullOrWhiteSpace(remoteUrl)) return remoteUrl;
+            if (string.IsNullOrWhiteSpace(localUrl))
+            {
+                localUrl = GetString(image, "url");
+            }
 
-            var url = GetString(image, "url");
-            if (!string.IsNullOrWhiteSpace(url)) return url;
+            if (string.IsNullOrWhiteSpace(remoteUrl))
+            {
+                remoteUrl = GetString(image, "remoteUrl");
+            }
+
+            if (!string.IsNullOrWhiteSpace(localUrl) && !string.IsNullOrWhiteSpace(remoteUrl))
+            {
+                break;
+            }
         }
 
-        return string.Empty;
+        if (!string.IsNullOrWhiteSpace(localUrl))
+        {
+            return (localUrl, ResolveRemotePosterUrl(remoteUrl));
+        }
+
+        if (!string.IsNullOrWhiteSpace(remoteUrl))
+        {
+            return (string.Empty, ResolveRemotePosterUrl(remoteUrl));
+        }
+
+        return (string.Empty, string.Empty);
+    }
+
+    private static string ResolveRemotePosterUrl(string candidateUrl)
+    {
+        var raw = (candidateUrl ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        return Uri.TryCreate(raw, UriKind.Absolute, out _)
+            ? raw
+            : string.Empty;
     }
 
     private static string BuildPosterProxyUrl(string source, string candidateUrl)

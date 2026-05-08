@@ -323,10 +323,11 @@ function buildCardMarkup(item) {
   const date = escapeHtml(formatDate(item?.releaseDateUtc));
   const type = escapeHtml(mapItemType(item));
   const poster = escapeHtml(item?.posterUrl || "");
+  const posterFallback = escapeHtml(item?.posterFallbackUrl || "");
 
   return `
     <article class="TanadosUIup-card">
-      ${poster ? `<img class="TanadosUIup-poster" src="${poster}" alt="${title}" loading="lazy">` : `<div class="TanadosUIup-poster" aria-hidden="true"></div>`}
+      ${poster ? `<img class="TanadosUIup-poster" src="${poster}" alt="${title}" loading="lazy"${posterFallback ? ` data-fallback-src="${posterFallback}"` : ""}>` : `<div class="TanadosUIup-poster" aria-hidden="true"></div>`}
       <div class="TanadosUIup-meta">
         <div class="TanadosUIup-eyebrow">
           <span class="TanadosUIup-pill">${source}</span>
@@ -339,6 +340,24 @@ function buildCardMarkup(item) {
       </div>
     </article>
   `;
+}
+
+function attachPosterFallbacks(root) {
+  root?.querySelectorAll?.(".TanadosUIup-poster[data-fallback-src]").forEach((img) => {
+    if (!(img instanceof HTMLImageElement)) return;
+    if (img.dataset.tanadosPosterFallbackBound === "1") return;
+
+    img.dataset.tanadosPosterFallbackBound = "1";
+    img.addEventListener("error", () => {
+      const fallback = text(img.dataset.fallbackSrc);
+      if (!fallback || img.dataset.tanadosPosterFallbackApplied === "1" || img.currentSrc === fallback) {
+        return;
+      }
+
+      img.dataset.tanadosPosterFallbackApplied = "1";
+      img.src = fallback;
+    });
+  });
 }
 
 async function fetchFeed({ force = false } = {}) {
@@ -465,6 +484,7 @@ async function renderModalBody({ force = false } = {}) {
   try {
     const feed = await fetchFeed({ force });
     body.innerHTML = renderFeedContent(feed);
+    attachPosterFallbacks(body);
   } catch (error) {
     body.innerHTML = `
       <div class="TanadosUIup-state">
@@ -691,6 +711,7 @@ async function refreshHomeSection({ force = false } = {}) {
         ${feed.items.slice(0, 8).map((item) => buildCardMarkup(item)).join("")}
       </div>
     `);
+    attachPosterFallbacks(section);
   } catch (error) {
     section.querySelector(".TanadosUIup-state").innerHTML = `
       ${escapeHtml(L("upcomingFeedError", "The upcoming feed could not be loaded."))}

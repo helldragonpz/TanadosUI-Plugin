@@ -113,6 +113,19 @@ function getCurrentUserId() {
   );
 }
 
+function extractMediaStreams(item) {
+  if (Array.isArray(item?.MediaStreams) && item.MediaStreams.length) {
+    return item.MediaStreams;
+  }
+
+  if (Array.isArray(item?.MediaSources)) {
+    const streams = item.MediaSources.flatMap((source) => Array.isArray(source?.MediaStreams) ? source.MediaStreams : []);
+    if (streams.length) return streams;
+  }
+
+  return [];
+}
+
 function getItemId(target) {
   const direct = text(
     target?.dataset?.itemId ||
@@ -135,7 +148,7 @@ function getItemId(target) {
   );
   if (carrierId) return carrierId;
 
-  const link = target?.closest?.("a[href*='#/details?id='], a[href*='/details?id=']");
+  const link = target?.closest?.("a[href*='id=']");
   return parseDetailsIdFromHref(link?.getAttribute?.("href"));
 }
 
@@ -172,7 +185,16 @@ function getCardHost(target) {
 
 function isLikelyMediaType(item) {
   const type = text(item?.Type).toLowerCase();
-  return type === "movie" || type === "series" || type === "season" || type === "episode";
+  return (
+    type === "movie" ||
+    type === "series" ||
+    type === "season" ||
+    type === "episode" ||
+    type === "video" ||
+    type === "musicvideo" ||
+    type === "trailer" ||
+    extractMediaStreams(item).length > 0
+  );
 }
 
 function isCardVisible(card) {
@@ -188,14 +210,22 @@ async function fetchItem(itemId) {
   if (itemPromises.has(itemId)) return itemPromises.get(itemId);
 
   const promise = (async () => {
-    const userId = getCurrentUserId();
-    if (!userId) return null;
-
-    const item = await makeApiRequest(
-      `/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?Fields=MediaStreams,Type`
+    let item = await makeApiRequest(
+      `/Items/${encodeURIComponent(itemId)}?Fields=MediaStreams,MediaSources,Type`
     ).catch(() => null);
 
-    itemCache.set(itemId, item || null);
+    if ((!item || !extractMediaStreams(item).length) && getCurrentUserId()) {
+      const userId = getCurrentUserId();
+      item = await makeApiRequest(
+        `/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?Fields=MediaStreams,MediaSources,Type`
+      ).catch(() => item);
+    }
+
+    if (item) {
+      itemCache.set(itemId, item);
+    } else {
+      itemCache.delete(itemId);
+    }
     itemPromises.delete(itemId);
     return item || null;
   })();
@@ -269,7 +299,7 @@ async function annotateCard(card) {
     return;
   }
 
-  const badges = createAudioLanguageBadges(item?.MediaStreams, { maxCount });
+  const badges = createAudioLanguageBadges(extractMediaStreams(item), { maxCount });
   if (!badges.length) {
     removeBadgeStrip(host);
     return;
@@ -335,7 +365,7 @@ async function refreshDetailBadges() {
     return;
   }
 
-  const badges = createAudioLanguageBadges(item?.MediaStreams, { maxCount });
+  const badges = createAudioLanguageBadges(extractMediaStreams(item), { maxCount });
   if (!badges.length) {
     removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
     return;
