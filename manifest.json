@@ -13,8 +13,8 @@
         "changelog": "v2.9.0.10\n\nHotfixes:\n- Fixed upcoming calendar posters when Sonarr or Radarr only provide `images[].remoteUrl` by routing those remote-only posters through the Tanados poster proxy instead of exposing raw external artwork URLs in the feed\n- Preserved true external poster URLs inside the proxy while still keeping authenticated Arr-local poster requests working, so TMDb and TVDb artwork no longer gets misclassified as a local Arr image path\n- Added a smoke-test regression case for direct-mode upcoming poster proxy URLs with authenticated image requests\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
         "targetAbi": "10.11.0.0",
         "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.10/TanadosUI-2.9.0.10-server.zip",
-        "checksum": "e701da09af430a4aa57b7d6dfde5d8a2",
-        "timestamp": "2026-05-09T13:35:17Z"
+        "checksum": "2ed97cd4ea623437c2f2648489c3d329",
+        "timestamp": "2026-05-09T13:38:00Z"
       },
       {
         "version": "2.9.0.8",
