@@ -135,6 +135,12 @@ namespace Jellyfin.Plugin.TanadosUI
 
                         await originalBody.WriteAsync(outBytes, 0, outBytes.Length, ctx.RequestAborted);
                     }
+                    catch (OperationCanceledException) when (ctx.RequestAborted.IsCancellationRequested)
+                    {
+                        reqLogger.LogDebug("[TanadosUI] In-memory index.html injection canceled because the request was aborted.");
+                        mem.Position = 0;
+                        await mem.CopyToAsync(originalBody);
+                    }
                     catch (Exception ex)
                     {
                         reqLogger.LogWarning(ex, "[TanadosUI] In-memory index.html injection failed, falling back to original body.");

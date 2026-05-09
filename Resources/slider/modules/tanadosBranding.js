@@ -84,6 +84,16 @@ const DRAWER_LABEL_SELECTOR = [
   ":scope > .listItemBodyText",
   ":scope > .btnText"
 ].join(", ");
+const DRAWER_TOGGLE_SELECTOR = [
+  ".mainDrawerButton",
+  ".barsMenuButton",
+  ".headerButtonLeft",
+  ".headerButtonLeftPanel",
+  "button[title='Menu']",
+  "button[aria-label='Menu']",
+  "button[title='Меню']",
+  "button[aria-label='Меню']"
+].join(", ");
 const SHELL_ROLE_RULES = [
   { key: "calendar", icon: "fa-solid fa-calendar-days", href: ["tab=calendar"], text: ["calendar", "upcoming", "календар", "предстоящ"] },
   { key: "watchlist", icon: "fa-solid fa-bookmark", href: ["tab=watchlist"], text: ["watchlist", "списък"] },
@@ -102,6 +112,7 @@ const SHELL_ROLE_RULES = [
 let brandingObserver = null;
 let applyTimer = 0;
 let drawerDiagnosticTimer = 0;
+let drawerToggleDiagnosticsBound = false;
 
 function text(value) {
   return String(value ?? "").trim();
@@ -423,16 +434,26 @@ function collectDrawerSnapshot() {
   const rect = drawer.getBoundingClientRect?.();
   const visibleNavItems = navItems.filter(isElementVisible);
   const visibleLabels = labels.filter((label) => isElementVisible(label) && text(label.textContent));
+  const bodyClass = text(document.body?.className).slice(0, 240);
+  const htmlClass = text(document.documentElement?.className).slice(0, 240);
 
   return {
     drawerClass: text(drawer.className).slice(0, 240),
-    bodyClass: text(document.body?.className).slice(0, 240),
-    htmlClass: text(document.documentElement?.className).slice(0, 240),
+    bodyClass,
+    htmlClass,
+    isOpenClass: drawer.classList.contains("drawer-open"),
+    isDashboardDocument: /\bdashboardDocument\b/.test(bodyClass),
     position: computed.position,
     display: computed.display,
     visibility: computed.visibility,
     opacity: computed.opacity,
     transform: text(computed.transform).slice(0, 180),
+    left: text(computed.left).slice(0, 64),
+    right: text(computed.right).slice(0, 64),
+    inlineLeft: text(drawer.style.left).slice(0, 64),
+    inlineRight: text(drawer.style.right).slice(0, 64),
+    inlineWidth: text(drawer.style.width).slice(0, 64),
+    inlineTransform: text(drawer.style.transform).slice(0, 180),
     pointerEvents: computed.pointerEvents,
     width: Math.round(rect?.width || drawer.offsetWidth || 0),
     height: Math.round(rect?.height || drawer.offsetHeight || 0),
@@ -450,11 +471,19 @@ function collectDrawerSnapshot() {
 function isDrawerSnapshotSuspicious(snapshot) {
   if (!snapshot) return false;
   if (snapshot.navCount <= 0) return true;
-  if (snapshot.visibleNavCount <= 0) return true;
-  if (snapshot.visibleLabelCount <= 0 && snapshot.iconCount <= 0) return true;
-  if (snapshot.display === "none" || snapshot.visibility === "hidden") return true;
-  if (Number(snapshot.opacity || "1") <= 0.01) return true;
-  if ((snapshot.width || 0) < 96) return true;
+
+  const widthTooSmall = (snapshot.width || 0) < 96;
+  const invisible = snapshot.display === "none" || snapshot.visibility === "hidden" || Number(snapshot.opacity || "1") <= 0.01;
+  const noVisibleEntries = snapshot.visibleNavCount <= 0 || (snapshot.visibleLabelCount <= 0 && snapshot.iconCount <= 0);
+
+  if (snapshot.isDashboardDocument) {
+    return widthTooSmall || invisible || noVisibleEntries;
+  }
+
+  if (snapshot.isOpenClass) {
+    return widthTooSmall || invisible || noVisibleEntries;
+  }
+
   return false;
 }
 
@@ -485,6 +514,23 @@ function queueDrawerDiagnostics(reason = "apply", delayMs = 160, force = false) 
   drawerDiagnosticTimer = window.setTimeout(() => {
     void reportDrawerDiagnostics(reason, force);
   }, delayMs);
+}
+
+function bindDrawerToggleDiagnostics() {
+  if (drawerToggleDiagnosticsBound) return;
+  drawerToggleDiagnosticsBound = true;
+
+  document.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target.closest(DRAWER_TOGGLE_SELECTOR) : null;
+    if (!(target instanceof HTMLElement)) return;
+
+    window.setTimeout(() => {
+      void reportDrawerDiagnostics("toggle-click", true);
+    }, 90);
+    window.setTimeout(() => {
+      void reportDrawerDiagnostics("toggle-click-settled", true);
+    }, 420);
+  }, true);
 }
 
 function applyBranding(runtime = currentRuntime()) {
@@ -522,7 +568,7 @@ function startObserver() {
       subtree: true,
       childList: true,
       attributes: true,
-      attributeFilter: ["class", "src", "srcset", "title", "aria-label"]
+      attributeFilter: ["class", "style", "src", "srcset", "title", "aria-label"]
     });
   } catch {}
 }
@@ -551,6 +597,7 @@ window.addEventListener("hashchange", () => {
   queueDrawerDiagnostics("hashchange");
 }, { passive: true });
 startObserver();
+bindDrawerToggleDiagnostics();
 
 window.TanadosUIBranding = {
   get runtime() {

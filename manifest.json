@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
     "versions": [
       {
+        "version": "2.9.0.8",
+        "changelog": "v2.9.0.8\n\nSidebar hotfixes:\n- Fixed the branded Jellyfin drawer open state by targeting the real `.mainDrawer.drawer-open` class used by Jellyfin instead of an incorrect descendant selector\n- Restored the desktop dashboard sidebar width and visibility with the same baseline rules the stock Jellyfin web client expects for `.dashboardDocument .mainDrawer`\n- Tightened drawer diagnostics so warnings only trigger for actual open-state or dashboard sidebar failures, not for normal closed-library drawer snapshots\n- Added post-click drawer diagnostics and included inline position and size data so future sidebar regressions are easier to isolate\n- Downgraded aborted in-memory index injection requests from warning noise to debug-level cancellation handling\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.8/TanadosUI-2.9.0.8-server.zip",
+        "checksum": "c8c3c6f76b499bbe32f0569d16aaed3e",
+        "timestamp": "2026-05-09T08:12:11Z"
+      },
+      {
         "version": "2.9.0.7",
         "changelog": "v2.9.0.7\n\nDiagnostics release:\n- Added a new TanadosUI client diagnostics endpoint so broken UI state can be reported directly into the Jellyfin server log\n- Added automatic warning logs for suspicious sidebar drawer state, including drawer visibility, nav item counts, label counts, and computed shell styles\n- Added automatic warning logs for audio flag fetch and fallback failures, plus summary diagnostics when badge refresh finishes with no visible output\n- Added an opt-in verbose browser debug mode through `localStorage.setItem('tanados_ui_debug', '1')` for deeper client traces without enabling noisy logs for everyone\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
         "targetAbi": "10.11.0.0",

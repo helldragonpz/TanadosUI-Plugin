@@ -51,7 +51,7 @@ html[data-tanados-ui-brand="1"] .emby-checkbox:checked + .checkboxOutline {
 html[data-tanados-ui-brand="1"] .skinHeader,
 html[data-tanados-ui-brand="1"] .mainDrawer,
 html[data-tanados-ui-brand="1"] .dialog,
-html[data-tanados-ui-brand="1"] .drawer-open .mainDrawer {
+html[data-tanados-ui-brand="1"] .mainDrawer.drawer-open {
   background: var(--tanados-shell-bg) !important;
   backdrop-filter: var(--tanados-shell-blur);
   -webkit-backdrop-filter: var(--tanados-shell-blur);
@@ -86,6 +86,12 @@ html[data-tanados-ui-brand="1"] .mainDrawer {
   box-shadow:
     0 26px 80px rgba(2, 0, 12, 0.52),
     inset -1px 0 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+html[data-tanados-ui-brand="1"] .mainDrawer.drawer-open {
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 html[data-tanados-ui-brand="1"] .mainDrawer > *,
@@ -185,6 +191,35 @@ html[data-tanados-ui-brand="1"] .mainDrawer .btnText {
 
 html[data-tanados-ui-brand="1"] .mainDrawer [data-tanados-brand="surface"] {
   margin: 0.85rem 0.95rem 1rem !important;
+}
+
+@media all and (min-width: 40em) {
+  html[data-tanados-ui-brand="1"] body.dashboardDocument .mainDrawer,
+  html[data-tanados-ui-brand="1"] .dashboardDocument .mainDrawer {
+    z-index: inherit !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 20.205em !important;
+    box-shadow:
+      0 26px 80px rgba(2, 0, 12, 0.42),
+      inset -1px 0 0 rgba(255, 255, 255, 0.04) !important;
+  }
+
+  html[dir="rtl"][data-tanados-ui-brand="1"] body.dashboardDocument .mainDrawer,
+  html[dir="rtl"][data-tanados-ui-brand="1"] .dashboardDocument .mainDrawer {
+    left: auto !important;
+    right: 0 !important;
+  }
+
+  html[data-tanados-ui-brand="1"] body.dashboardDocument .mainDrawer .mainDrawer-scrollContainer,
+  html[data-tanados-ui-brand="1"] .dashboardDocument .mainDrawer .mainDrawer-scrollContainer {
+    margin-top: 5em !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
 }
 
 html[data-tanados-ui-brand="1"] .paper-icon-button-light:hover,
