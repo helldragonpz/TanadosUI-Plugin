@@ -11,6 +11,7 @@ using Jellyfin.Database.Implementations.Entities;
 using Jellyfin.Database.Implementations.Enums;
 using MediaBrowser.Controller.Library;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Jellyfin.Plugin.TanadosUI.Controllers;
 
@@ -21,11 +22,16 @@ public class UpcomingCalendarController : ControllerBase
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<UpcomingCalendarController> _logger;
     private readonly IUserManager _users;
 
-    public UpcomingCalendarController(IHttpClientFactory httpClientFactory, IUserManager users)
+    public UpcomingCalendarController(
+        IHttpClientFactory httpClientFactory,
+        ILogger<UpcomingCalendarController> logger,
+        IUserManager users)
     {
         _httpClientFactory = httpClientFactory;
+        _logger = logger;
         _users = users;
     }
 
@@ -182,18 +188,35 @@ public class UpcomingCalendarController : ControllerBase
             return NotFound();
         }
 
-        using var requestMessage = new HttpRequestMessage(HttpMethod.Get, targetUrl);
-        requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
-        if (ShouldForwardApiKey(targetUrl, sourceBaseUrl) && !string.IsNullOrWhiteSpace(sourceApiKey))
+        try
         {
-            requestMessage.Headers.Add("X-Api-Key", sourceApiKey);
-        }
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, targetUrl);
+            requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
+            if (ShouldForwardApiKey(targetUrl, sourceBaseUrl) && !string.IsNullOrWhiteSpace(sourceApiKey))
+            {
+                requestMessage.Headers.Add("X-Api-Key", sourceApiKey);
+            }
 
-        using var response = await SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
-        var contentType = response.Content.Headers.ContentType?.ToString();
-        NoCache();
-        return File(bytes, string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType);
+            using var response = await SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
+            var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken).ConfigureAwait(false);
+            var contentType = response.Content.Headers.ContentType?.ToString();
+            NoCache();
+            return File(bytes, string.IsNullOrWhiteSpace(contentType) ? "image/jpeg" : contentType);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "[TanadosUI] Upcoming poster proxy failed. source={Source} requestedUrl={RequestedUrl} resolvedUrl={ResolvedUrl}",
+                normalizedSource,
+                rawUrl,
+                targetUrl);
+            return NotFound();
+        }
     }
 
     private async Task<List<UpcomingFeedItem>> FetchSonarrItemsAsync(string? baseUrl, string? apiKey, int days, CancellationToken cancellationToken)
@@ -477,14 +500,16 @@ public class UpcomingCalendarController : ControllerBase
             return string.Empty;
         }
 
-        if (Uri.TryCreate(raw, UriKind.Absolute, out var absolute))
-        {
-            return absolute.ToString();
-        }
-
         if (string.IsNullOrWhiteSpace(baseUrl) || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
         {
-            return string.Empty;
+            return Uri.TryCreate(raw, UriKind.Absolute, out var absoluteWithoutBase)
+                ? absoluteWithoutBase.ToString()
+                : string.Empty;
+        }
+
+        if (Uri.TryCreate(raw, UriKind.Absolute, out var absolute))
+        {
+            raw = string.Concat(absolute.AbsolutePath, absolute.Query);
         }
 
         if (raw.StartsWith("//", StringComparison.Ordinal))

@@ -1,9 +1,11 @@
 import { getConfig } from "./config.js";
+import { emitClientDiagnostic } from "./clientDiagnostics.js";
 import {
   fetchRuntimeConfig,
   getRuntimeConfigSnapshot,
   subscribeRuntimeConfig
 } from "./runtimeConfig.js";
+import { withServer } from "./jfUrl.js";
 
 const MODAL_ID = "TanadosUI-upcoming-modal-root";
 const HOME_SECTION_ID = "TanadosUI-upcoming-home-section";
@@ -315,6 +317,57 @@ function mapItemType(item) {
   return type || L("upcomingType", "Type");
 }
 
+function getApiTokenSafe() {
+  try {
+    return text(window.ApiClient?.accessToken?.() || window.ApiClient?._accessToken || window.ApiClient?._authToken || "");
+  } catch {
+    return "";
+  }
+}
+
+function appendQueryParam(url, key, value) {
+  const rawUrl = text(url);
+  const rawKey = text(key);
+  const rawValue = text(value);
+  if (!rawUrl || !rawKey || !rawValue) return rawUrl;
+
+  try {
+    const resolved = new URL(rawUrl, window.location.href);
+    if (!resolved.searchParams.has(rawKey)) {
+      resolved.searchParams.set(rawKey, rawValue);
+    }
+    return resolved.toString();
+  } catch {
+    const separator = rawUrl.includes("?") ? "&" : "?";
+    return `${rawUrl}${separator}${encodeURIComponent(rawKey)}=${encodeURIComponent(rawValue)}`;
+  }
+}
+
+function isUpcomingPosterProxyUrl(url) {
+  const raw = text(url);
+  if (!raw) return false;
+
+  try {
+    const resolved = new URL(raw, window.location.href);
+    return /\/(?:Plugins\/)?TanadosUI\/upcoming\/poster$/i.test(resolved.pathname);
+  } catch {
+    return /^\/(?:Plugins\/)?TanadosUI\/upcoming\/poster(?:[/?#]|$)/i.test(raw);
+  }
+}
+
+function buildPosterImageUrl(url) {
+  const raw = text(url);
+  if (!raw) return "";
+
+  const withBase = raw.startsWith("/") ? withServer(raw) : raw;
+  if (!isUpcomingPosterProxyUrl(withBase)) {
+    return withBase;
+  }
+
+  const token = getApiTokenSafe();
+  return token ? appendQueryParam(withBase, "api_key", token) : withBase;
+}
+
 function buildCardMarkup(item) {
   const title = escapeHtml(item?.title);
   const subtitle = escapeHtml(item?.subtitle || item?.seriesTitle || "");
@@ -322,7 +375,7 @@ function buildCardMarkup(item) {
   const source = escapeHtml(item?.source || "");
   const date = escapeHtml(formatDate(item?.releaseDateUtc));
   const type = escapeHtml(mapItemType(item));
-  const poster = escapeHtml(item?.posterUrl || "");
+  const poster = escapeHtml(buildPosterImageUrl(item?.posterUrl || ""));
   const posterFallback = escapeHtml(item?.posterFallbackUrl || "");
 
   return `
@@ -350,12 +403,35 @@ function attachPosterFallbacks(root) {
     img.dataset.tanadosPosterFallbackBound = "1";
     img.addEventListener("error", () => {
       const fallback = text(img.dataset.fallbackSrc);
-      if (!fallback || img.dataset.tanadosPosterFallbackApplied === "1" || img.currentSrc === fallback) {
+      const currentSrc = text(img.currentSrc || img.src);
+      if (!fallback || img.dataset.tanadosPosterFallbackApplied === "1" || currentSrc === fallback) {
+        void emitClientDiagnostic({
+          scope: "upcoming",
+          event: "poster-error",
+          level: "warning",
+          message: "Upcoming poster could not be displayed.",
+          data: {
+            currentSrc,
+            fallbackSrc: fallback,
+            fallbackApplied: img.dataset.tanadosPosterFallbackApplied === "1"
+          }
+        });
         return;
       }
 
       img.dataset.tanadosPosterFallbackApplied = "1";
       img.src = fallback;
+
+      void emitClientDiagnostic({
+        scope: "upcoming",
+        event: "poster-fallback",
+        level: "warning",
+        message: "Upcoming poster proxy failed, falling back to remote artwork.",
+        data: {
+          currentSrc,
+          fallbackSrc: fallback
+        }
+      });
     });
   });
 }

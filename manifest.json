@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
     "versions": [
       {
+        "version": "2.9.0.9",
+        "changelog": "v2.9.0.9\n\nHotfixes:\n- Fixed upcoming calendar posters by rebasing Sonarr and Radarr local cover URLs onto the configured Arr base URL before proxying them through Jellyfin, so absolute `MediaCover` URLs from internal hosts or wrong base paths still resolve correctly\n- Added authenticated calendar poster URLs in the web client for the Tanados upcoming poster proxy route and warning diagnostics when a poster proxy request fails and falls back to remote artwork\n- Changed the upcoming poster proxy endpoint to log failures and return `404` instead of bubbling a server error, allowing client-side fallback artwork to recover cleanly\n- Improved drawer diagnostics by scoring multiple `.mainDrawer` candidates instead of always inspecting the first one, and by suppressing false warnings for empty closed drawer shells with no menu items yet\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.9/TanadosUI-2.9.0.9-server.zip",
+        "checksum": "2e01f6cfccdc82a1123fd8e1c0d2ed33",
+        "timestamp": "2026-05-09T09:12:33Z"
+      },
+      {
         "version": "2.9.0.8",
         "changelog": "v2.9.0.8\n\nSidebar hotfixes:\n- Fixed the branded Jellyfin drawer open state by targeting the real `.mainDrawer.drawer-open` class used by Jellyfin instead of an incorrect descendant selector\n- Restored the desktop dashboard sidebar width and visibility with the same baseline rules the stock Jellyfin web client expects for `.dashboardDocument .mainDrawer`\n- Tightened drawer diagnostics so warnings only trigger for actual open-state or dashboard sidebar failures, not for normal closed-library drawer snapshots\n- Added post-click drawer diagnostics and included inline position and size data so future sidebar regressions are easier to isolate\n- Downgraded aborted in-memory index injection requests from warning noise to debug-level cancellation handling\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
         "targetAbi": "10.11.0.0",

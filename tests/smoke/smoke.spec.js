@@ -1,4 +1,5 @@
 const { test, expect } = require("@playwright/test");
+const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5qXx8AAAAASUVORK5CYII=", "base64");
 
 const runtimeConfig = {
   appDisplayName: "Tanados UI",
@@ -28,7 +29,7 @@ const runtimeConfig = {
   audioFlagMaxCount: 2,
   preferredLang: "bg-BG",
   fallbackLang: "en-US",
-  version: "2.9.0.8"
+  version: "2.9.0.9"
 };
 
 const adminRuntimeConfig = {
@@ -68,7 +69,7 @@ const upcomingFeed = {
       source: "Radarr",
       type: "Movie",
       releaseDateUtc: "2026-05-12T00:00:00Z",
-      posterUrl: "/slider/src/images/tanados-favicon.png"
+      posterUrl: "/TanadosUI/upcoming/poster?source=radarr&url=%2FMediaCover%2F1%2Fposter.jpg%3FlastWrite%3D1"
     },
     {
       title: "The Example Episode",
@@ -77,7 +78,7 @@ const upcomingFeed = {
       source: "Sonarr",
       type: "Episode",
       releaseDateUtc: "2026-05-13T00:00:00Z",
-      posterUrl: "/slider/src/images/tanados-favicon.png"
+      posterUrl: "/TanadosUI/upcoming/poster?source=sonarr&url=%2FMediaCover%2F2%2Fposter.jpg%3FlastWrite%3D2"
     }
   ]
 };
@@ -285,6 +286,13 @@ async function installApiRoutes(page, { isAdmin = true, runtimeOverride = {}, ad
   await stubJson(page, "**/TanadosUI/runtime-config/admin", adminRuntime);
   await stubJson(page, "**/Plugins/TanadosUI/runtime-config/admin", adminRuntime);
   await stubJson(page, "**/TanadosUI/upcoming/feed", upcomingFeed);
+  await page.route("**/TanadosUI/upcoming/poster**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "image/png",
+      body: tinyPng
+    });
+  });
   await page.route("**/TanadosUI/upcoming/test", async (route) => {
     const body = route.request().postDataJSON?.() || {};
     const source = String(body.source || "").toLowerCase();
@@ -507,14 +515,20 @@ test("upcoming calendar injects top-nav and home section on home views", async (
     window.location.hash = "#/home?tab=0";
   });
 
+  const posterRequestPromise = page.waitForRequest((request) => (
+    request.url().includes("/TanadosUI/upcoming/poster") &&
+    request.url().includes("api_key=smoke-token")
+  ));
   await page.evaluate(async () => {
     await import("/slider/modules/upcomingCalendar.js");
   });
+  const posterRequest = await posterRequestPromise;
 
   await expect(page.locator(".emby-tabs-slider .TanadosUI-upcoming-nav-button")).toBeVisible();
   await expect(page.locator(".mui-tabs-shell .TanadosUI-upcoming-nav-button")).toBeVisible();
   await expect(page.locator("#TanadosUI-upcoming-home-section")).toBeVisible();
   await expect(page.locator("#TanadosUI-upcoming-home-section .TanadosUIup-card")).toHaveCount(2);
+  expect(posterRequest.url()).toContain("api_key=smoke-token");
 
   expect(pageErrors).toEqual([]);
 });

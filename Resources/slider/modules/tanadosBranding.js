@@ -418,8 +418,7 @@ function isElementVisible(el) {
   );
 }
 
-function collectDrawerSnapshot() {
-  const drawer = document.querySelector(".mainDrawer");
+function collectDrawerSnapshotFor(drawer) {
   if (!(drawer instanceof HTMLElement)) {
     return null;
   }
@@ -468,13 +467,50 @@ function collectDrawerSnapshot() {
   };
 }
 
+function getDrawerSnapshotScore(snapshot) {
+  if (!snapshot) return Number.NEGATIVE_INFINITY;
+  return (
+    (snapshot.visibleNavCount || 0) * 100 +
+    (snapshot.visibleLabelCount || 0) * 50 +
+    (snapshot.navCount || 0) * 10 +
+    Math.min(snapshot.width || 0, 400) +
+    (snapshot.isDashboardDocument ? 25 : 0) +
+    (snapshot.isOpenClass ? 25 : 0)
+  );
+}
+
+function collectDrawerSnapshot() {
+  const drawers = Array.from(document.querySelectorAll(".mainDrawer"))
+    .filter((el) => el instanceof HTMLElement);
+  if (!drawers.length) {
+    return null;
+  }
+
+  let bestSnapshot = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (const drawer of drawers) {
+    const snapshot = collectDrawerSnapshotFor(drawer);
+    const score = getDrawerSnapshotScore(snapshot);
+    if (score > bestScore) {
+      bestScore = score;
+      bestSnapshot = snapshot;
+    }
+  }
+
+  return bestSnapshot;
+}
+
 function isDrawerSnapshotSuspicious(snapshot) {
   if (!snapshot) return false;
-  if (snapshot.navCount <= 0) return true;
 
   const widthTooSmall = (snapshot.width || 0) < 96;
   const invisible = snapshot.display === "none" || snapshot.visibility === "hidden" || Number(snapshot.opacity || "1") <= 0.01;
   const noVisibleEntries = snapshot.visibleNavCount <= 0 || (snapshot.visibleLabelCount <= 0 && snapshot.iconCount <= 0);
+
+  if (snapshot.navCount <= 0) {
+    return snapshot.isOpenClass && (widthTooSmall || invisible);
+  }
 
   if (snapshot.isDashboardDocument) {
     return widthTooSmall || invisible || noVisibleEntries;
