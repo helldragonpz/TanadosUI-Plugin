@@ -368,15 +368,67 @@ function buildPosterImageUrl(url) {
   return token ? appendQueryParam(withBase, "api_key", token) : withBase;
 }
 
+function pickFeedValue(source, ...keys) {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value !== undefined && value !== null) {
+      return value;
+    }
+  }
+  return "";
+}
+
+function normalizeFeedItem(item) {
+  if (!item || typeof item !== "object") {
+    return {
+      id: "",
+      source: "",
+      type: "",
+      title: "",
+      subtitle: "",
+      overview: "",
+      releaseDateUtc: "",
+      posterUrl: "",
+      posterFallbackUrl: "",
+      seriesTitle: ""
+    };
+  }
+
+  return {
+    id: pickFeedValue(item, "id", "Id"),
+    source: pickFeedValue(item, "source", "Source"),
+    type: pickFeedValue(item, "type", "Type"),
+    title: pickFeedValue(item, "title", "Title"),
+    subtitle: pickFeedValue(item, "subtitle", "Subtitle"),
+    overview: pickFeedValue(item, "overview", "Overview"),
+    releaseDateUtc: pickFeedValue(item, "releaseDateUtc", "ReleaseDateUtc"),
+    posterUrl: pickFeedValue(item, "posterUrl", "PosterUrl"),
+    posterFallbackUrl: pickFeedValue(item, "posterFallbackUrl", "PosterFallbackUrl"),
+    seriesTitle: pickFeedValue(item, "seriesTitle", "SeriesTitle")
+  };
+}
+
+function normalizeFeedError(error) {
+  if (!error || typeof error !== "object") {
+    return { source: "", message: "" };
+  }
+
+  return {
+    source: pickFeedValue(error, "source", "Source"),
+    message: pickFeedValue(error, "message", "Message")
+  };
+}
+
 function buildCardMarkup(item) {
-  const title = escapeHtml(item?.title);
-  const subtitle = escapeHtml(item?.subtitle || item?.seriesTitle || "");
-  const overview = escapeHtml(item?.overview || "");
-  const source = escapeHtml(item?.source || "");
-  const date = escapeHtml(formatDate(item?.releaseDateUtc));
-  const type = escapeHtml(mapItemType(item));
-  const poster = escapeHtml(buildPosterImageUrl(item?.posterUrl || ""));
-  const posterFallback = escapeHtml(item?.posterFallbackUrl || "");
+  const normalizedItem = normalizeFeedItem(item);
+  const title = escapeHtml(normalizedItem.title);
+  const subtitle = escapeHtml(normalizedItem.subtitle || normalizedItem.seriesTitle || "");
+  const overview = escapeHtml(normalizedItem.overview || "");
+  const source = escapeHtml(normalizedItem.source || "");
+  const date = escapeHtml(formatDate(normalizedItem.releaseDateUtc));
+  const type = escapeHtml(mapItemType(normalizedItem));
+  const poster = escapeHtml(buildPosterImageUrl(normalizedItem.posterUrl || ""));
+  const posterFallback = escapeHtml(normalizedItem.posterFallbackUrl || "");
 
   return `
     <article class="TanadosUIup-card">
@@ -457,8 +509,8 @@ async function fetchFeed({ force = false } = {}) {
     const normalized = {
       ok: payload?.ok !== false,
       enabled: payload?.enabled === true,
-      items: Array.isArray(payload?.items) ? payload.items : [],
-      errors: Array.isArray(payload?.errors) ? payload.errors : [],
+      items: Array.isArray(payload?.items) ? payload.items.map(normalizeFeedItem) : [],
+      errors: Array.isArray(payload?.errors) ? payload.errors.map(normalizeFeedError) : [],
       partial: payload?.partial === true
     };
     feedCache = normalized;

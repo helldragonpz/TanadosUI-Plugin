@@ -63,22 +63,22 @@ const upcomingFeed = {
   errors: [],
   items: [
     {
-      title: "The Example Movie",
-      subtitle: "Radarr release",
-      overview: "A smoke-test movie entry.",
-      source: "Radarr",
-      type: "Movie",
-      releaseDateUtc: "2026-05-12T00:00:00Z",
-      posterUrl: "/TanadosUI/upcoming/poster?source=radarr&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2Fsmoke-poster.jpg&mode=direct"
+      Title: "The Example Movie",
+      Subtitle: "Radarr release",
+      Overview: "A smoke-test movie entry.",
+      Source: "Radarr",
+      Type: "Movie",
+      ReleaseDateUtc: "2026-05-12T00:00:00Z",
+      PosterUrl: "/TanadosUI/upcoming/poster?source=radarr&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2Fsmoke-poster.jpg&mode=direct"
     },
     {
-      title: "The Example Episode",
-      subtitle: "Series S01E02",
-      overview: "A smoke-test episode entry.",
-      source: "Sonarr",
-      type: "Episode",
-      releaseDateUtc: "2026-05-13T00:00:00Z",
-      posterUrl: "/TanadosUI/upcoming/poster?source=sonarr&url=%2FMediaCover%2F2%2Fposter.jpg%3FlastWrite%3D2"
+      Title: "The Example Episode",
+      Subtitle: "Series S01E02",
+      Overview: "A smoke-test episode entry.",
+      Source: "Sonarr",
+      Type: "Episode",
+      ReleaseDateUtc: "2026-05-13T00:00:00Z",
+      PosterUrl: "/TanadosUI/upcoming/poster?source=sonarr&url=%2FMediaCover%2F2%2Fposter.jpg%3FlastWrite%3D2"
     }
   ]
 };

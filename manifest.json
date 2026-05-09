@@ -9,12 +9,12 @@
     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
     "versions": [
       {
-        "version": "2.9.0.10",
-        "changelog": "v2.9.0.10\n\nHotfixes:\n- Fixed upcoming calendar posters when Sonarr or Radarr only provide `images[].remoteUrl` by routing those remote-only posters through the Tanados poster proxy instead of exposing raw external artwork URLs in the feed\n- Preserved true external poster URLs inside the proxy while still keeping authenticated Arr-local poster requests working, so TMDb and TVDb artwork no longer gets misclassified as a local Arr image path\n- Added a smoke-test regression case for direct-mode upcoming poster proxy URLs with authenticated image requests\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
+        "version": "2.9.0.11",
+        "changelog": "v2.9.0.11\n\nHotfixes:\n- Fixed the upcoming calendar client to accept the real live payload shape from Jellyfin, normalizing PascalCase fields like `PosterUrl`, `Title`, and `ReleaseDateUtc` into the camelCase structure the browser renderer expects\n- Kept compatibility with the earlier camelCase fixture shape so both local smoke data and live server data render the same way\n- Updated the upcoming calendar smoke coverage to use the real PascalCase payload shape returned by the live plugin feed\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
         "targetAbi": "10.11.0.0",
-        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.10/TanadosUI-2.9.0.10-server.zip",
-        "checksum": "2ed97cd4ea623437c2f2648489c3d329",
-        "timestamp": "2026-05-09T13:38:00Z"
+        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.11/TanadosUI-2.9.0.11-server.zip",
+        "checksum": "fbe0a272175cbc568d83f0fafee24d83",
+        "timestamp": "2026-05-09T16:08:22Z"
       },
       {
         "version": "2.9.0.8",
