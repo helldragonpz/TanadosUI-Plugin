@@ -69,7 +69,7 @@ const upcomingFeed = {
       source: "Radarr",
       type: "Movie",
       releaseDateUtc: "2026-05-12T00:00:00Z",
-      posterUrl: "/TanadosUI/upcoming/poster?source=radarr&url=%2FMediaCover%2F1%2Fposter.jpg%3FlastWrite%3D1"
+      posterUrl: "/TanadosUI/upcoming/poster?source=radarr&url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2Fsmoke-poster.jpg&mode=direct"
     },
     {
       title: "The Example Episode",
@@ -529,6 +529,7 @@ test("upcoming calendar injects top-nav and home section on home views", async (
   await expect(page.locator("#TanadosUI-upcoming-home-section")).toBeVisible();
   await expect(page.locator("#TanadosUI-upcoming-home-section .TanadosUIup-card")).toHaveCount(2);
   expect(posterRequest.url()).toContain("api_key=smoke-token");
+  expect(posterRequest.url()).toContain("mode=direct");
 
   expect(pageErrors).toEqual([]);
 });

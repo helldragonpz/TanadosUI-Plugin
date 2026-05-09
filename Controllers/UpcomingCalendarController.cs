@@ -46,6 +46,7 @@ public class UpcomingCalendarController : ControllerBase
         string PosterUrl,
         string PosterFallbackUrl,
         string SeriesTitle);
+    private sealed record PosterCandidateSelection(string PreferredUrl, string FallbackUrl, bool PreferredUsesDirectProxy);
 
     private sealed record SourceError(string Source, string Message);
     public sealed record UpcomingSourceTestRequest(string Source, string Url, string ApiKey, int? Days);
@@ -169,12 +170,13 @@ public class UpcomingCalendarController : ControllerBase
     }
 
     [HttpGet("poster")]
-    public async Task<IActionResult> GetPoster([FromQuery] string? source, [FromQuery] string? url, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetPoster([FromQuery] string? source, [FromQuery] string? url, [FromQuery] string? mode, CancellationToken cancellationToken)
     {
         var cfg = TanadosUIPlugin.Instance?.Configuration
                   ?? throw new InvalidOperationException("Plugin not available.");
         var normalizedSource = NormalizeSource(source);
         var rawUrl = (url ?? string.Empty).Trim();
+        var useDirectProxy = string.Equals((mode ?? string.Empty).Trim(), "direct", StringComparison.OrdinalIgnoreCase);
         if (string.IsNullOrWhiteSpace(normalizedSource) || string.IsNullOrWhiteSpace(rawUrl))
         {
             return NotFound();
@@ -192,7 +194,7 @@ public class UpcomingCalendarController : ControllerBase
         {
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, targetUrl);
             requestMessage.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("image/*"));
-            if (ShouldForwardApiKey(targetUrl, sourceBaseUrl) && !string.IsNullOrWhiteSpace(sourceApiKey))
+            if (!useDirectProxy && ShouldForwardApiKey(targetUrl, sourceBaseUrl) && !string.IsNullOrWhiteSpace(sourceApiKey))
             {
                 requestMessage.Headers.Add("X-Api-Key", sourceApiKey);
             }
@@ -246,7 +248,7 @@ public class UpcomingCalendarController : ControllerBase
             var episodeTitle = GetString(element, "title");
             var releaseDateUtc = PickDateString(element, "airDateUtc", "airDate");
             if (string.IsNullOrWhiteSpace(releaseDateUtc)) continue;
-            var (posterCandidateUrl, posterFallbackUrl) = GetPosterCandidateUrls(series);
+            var posterSelection = GetPosterCandidateSelection(series);
 
             var seasonNumber = GetInt(element, "seasonNumber");
             var episodeNumber = GetInt(element, "episodeNumber");
@@ -270,10 +272,10 @@ public class UpcomingCalendarController : ControllerBase
                 Subtitle: string.Join(" • ", subtitleParts.Where(part => !string.IsNullOrWhiteSpace(part))),
                 Overview: GetString(element, "overview"),
                 ReleaseDateUtc: releaseDateUtc,
-                PosterUrl: !string.IsNullOrWhiteSpace(posterCandidateUrl)
-                    ? BuildPosterProxyUrl("sonarr", posterCandidateUrl)
-                    : posterFallbackUrl,
-                PosterFallbackUrl: posterFallbackUrl,
+                PosterUrl: !string.IsNullOrWhiteSpace(posterSelection.PreferredUrl)
+                    ? BuildPosterProxyUrl("sonarr", posterSelection.PreferredUrl, posterSelection.PreferredUsesDirectProxy)
+                    : posterSelection.FallbackUrl,
+                PosterFallbackUrl: posterSelection.FallbackUrl,
                 SeriesTitle: seriesTitle
             ));
         }
@@ -306,7 +308,7 @@ public class UpcomingCalendarController : ControllerBase
             var title = GetString(element, "title");
             var releaseDateUtc = PickDateString(element, "physicalRelease", "digitalRelease", "inCinemas", "premiereDate");
             if (string.IsNullOrWhiteSpace(releaseDateUtc) || string.IsNullOrWhiteSpace(title)) continue;
-            var (posterCandidateUrl, posterFallbackUrl) = GetPosterCandidateUrls(element);
+            var posterSelection = GetPosterCandidateSelection(element);
 
             items.Add(new UpcomingFeedItem(
                 Id: $"radarr:{GetInt(element, "id")}",
@@ -316,10 +318,10 @@ public class UpcomingCalendarController : ControllerBase
                 Subtitle: GetString(element, "year"),
                 Overview: GetString(element, "overview"),
                 ReleaseDateUtc: releaseDateUtc,
-                PosterUrl: !string.IsNullOrWhiteSpace(posterCandidateUrl)
-                    ? BuildPosterProxyUrl("radarr", posterCandidateUrl)
-                    : posterFallbackUrl,
-                PosterFallbackUrl: posterFallbackUrl,
+                PosterUrl: !string.IsNullOrWhiteSpace(posterSelection.PreferredUrl)
+                    ? BuildPosterProxyUrl("radarr", posterSelection.PreferredUrl, posterSelection.PreferredUsesDirectProxy)
+                    : posterSelection.FallbackUrl,
+                PosterFallbackUrl: posterSelection.FallbackUrl,
                 SeriesTitle: string.Empty
             ));
         }
@@ -424,11 +426,11 @@ public class UpcomingCalendarController : ControllerBase
         return string.Empty;
     }
 
-    private static (string PreferredUrl, string FallbackUrl) GetPosterCandidateUrls(JsonElement element)
+    private static PosterCandidateSelection GetPosterCandidateSelection(JsonElement element)
     {
         if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty("images", out var images) || images.ValueKind != JsonValueKind.Array)
         {
-            return (string.Empty, string.Empty);
+            return new PosterCandidateSelection(string.Empty, string.Empty, false);
         }
 
         var localUrl = string.Empty;
@@ -456,15 +458,16 @@ public class UpcomingCalendarController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(localUrl))
         {
-            return (localUrl, ResolveRemotePosterUrl(remoteUrl));
+            return new PosterCandidateSelection(localUrl, ResolveRemotePosterUrl(remoteUrl), false);
         }
 
         if (!string.IsNullOrWhiteSpace(remoteUrl))
         {
-            return (string.Empty, ResolveRemotePosterUrl(remoteUrl));
+            var resolvedRemoteUrl = ResolveRemotePosterUrl(remoteUrl);
+            return new PosterCandidateSelection(resolvedRemoteUrl, resolvedRemoteUrl, true);
         }
 
-        return (string.Empty, string.Empty);
+        return new PosterCandidateSelection(string.Empty, string.Empty, false);
     }
 
     private static string ResolveRemotePosterUrl(string candidateUrl)
@@ -480,7 +483,7 @@ public class UpcomingCalendarController : ControllerBase
             : string.Empty;
     }
 
-    private static string BuildPosterProxyUrl(string source, string candidateUrl)
+    private static string BuildPosterProxyUrl(string source, string candidateUrl, bool useDirectProxy)
     {
         var normalizedSource = NormalizeSource(source);
         var raw = (candidateUrl ?? string.Empty).Trim();
@@ -489,7 +492,13 @@ public class UpcomingCalendarController : ControllerBase
             return string.Empty;
         }
 
-        return $"/TanadosUI/upcoming/poster?source={Uri.EscapeDataString(normalizedSource)}&url={Uri.EscapeDataString(raw)}";
+        var proxyUrl = $"/TanadosUI/upcoming/poster?source={Uri.EscapeDataString(normalizedSource)}&url={Uri.EscapeDataString(raw)}";
+        if (useDirectProxy)
+        {
+            proxyUrl += "&mode=direct";
+        }
+
+        return proxyUrl;
     }
 
     private static string ResolvePosterRequestUrl(string baseUrl, string candidateUrl)
@@ -500,16 +509,14 @@ public class UpcomingCalendarController : ControllerBase
             return string.Empty;
         }
 
-        if (string.IsNullOrWhiteSpace(baseUrl) || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
+        if (Uri.TryCreate(raw, UriKind.Absolute, out var absoluteCandidate))
         {
-            return Uri.TryCreate(raw, UriKind.Absolute, out var absoluteWithoutBase)
-                ? absoluteWithoutBase.ToString()
-                : string.Empty;
+            return absoluteCandidate.ToString();
         }
 
-        if (Uri.TryCreate(raw, UriKind.Absolute, out var absolute))
+        if (string.IsNullOrWhiteSpace(baseUrl) || !Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
         {
-            raw = string.Concat(absolute.AbsolutePath, absolute.Query);
+            return string.Empty;
         }
 
         if (raw.StartsWith("//", StringComparison.Ordinal))
