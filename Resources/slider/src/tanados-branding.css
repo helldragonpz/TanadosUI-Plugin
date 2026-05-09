@@ -57,7 +57,6 @@ html[data-tanados-ui-brand="1"] .drawer-open .mainDrawer {
   -webkit-backdrop-filter: var(--tanados-shell-blur);
   box-shadow: var(--tanados-shadow) !important;
   isolation: isolate;
-  position: relative;
 }
 
 html[data-tanados-ui-brand="1"] .skinHeader {

@@ -28,7 +28,7 @@ const runtimeConfig = {
   audioFlagMaxCount: 2,
   preferredLang: "bg-BG",
   fallbackLang: "en-US",
-  version: "2.9.0.5"
+  version: "2.9.0.6"
 };
 
 const adminRuntimeConfig = {
@@ -445,6 +445,8 @@ test("login branding injection rewrites app surfaces without duplicating logos",
   await expect(page.locator(".mainDrawer .navMenuOptionIcon")).toHaveCount(4);
   await expect(page.locator(".mainDrawer .TanadosUI-drawer-icon")).toHaveCount(0);
   await expect(page.locator(".emby-tabs-slider .TanadosUI-shell-icon")).toHaveCount(2);
+  await expect(page.locator(".mainDrawer")).toHaveJSProperty("className", "mainDrawer touch-menu-la");
+  await expect(page.locator(".mainDrawer")).toHaveCSS("position", "fixed");
 
   expect(pageErrors).toEqual([]);
 });

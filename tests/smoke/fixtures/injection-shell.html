@@ -5,9 +5,22 @@
     <base href="/web/">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Jellyfin</title>
+    <style>
+      .touch-menu-la {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 22rem;
+        display: flex;
+      }
+      .mainDrawer-scrollContainer {
+        flex: 1 1 auto;
+      }
+    </style>
   </head>
   <body>
-    <aside class="mainDrawer">
+    <aside class="mainDrawer touch-menu-la">
       <div class="mainDrawer-scrollContainer">
         <div class="mainDrawerLogo">Jellyfin</div>
         <nav class="libraryMenuOptions">
