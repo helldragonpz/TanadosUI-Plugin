@@ -6,6 +6,7 @@ import {
 } from "../../Plugins/TanadosUI/runtime/api.js";
 import { createAudioLanguageBadges } from "./audioLanguageUtils.js";
 import { fetchRuntimeConfig, getRuntimeConfigSnapshot, subscribeRuntimeConfig } from "./runtimeConfig.js";
+import { emitClientDiagnostic, isClientDiagnosticsVerboseEnabled } from "./clientDiagnostics.js";
 
 const STYLE_ID = "tanados-audio-language-badges-style";
 const CARD_BADGE_CLASS = "TanadosUI-audio-card-badges";
@@ -119,6 +120,34 @@ function getCurrentUserId() {
   );
 }
 
+function createRefreshStats(mode = "cards") {
+  return {
+    mode,
+    userIdPresent: !!getCurrentUserId(),
+    visibleCardCount: 0,
+    annotatedCardCount: 0,
+    renderedCardCount: 0,
+    noBadgeCount: 0,
+    noMediaCount: 0,
+    missingItemIdCount: 0,
+    fetchFailureCount: 0,
+    seriesFallbackCount: 0,
+    seriesFallbackMissCount: 0,
+    detailItemId: "",
+    detailRendered: false,
+    detailFetchFailed: false,
+    detailNoBadges: false,
+    sampleItemIds: []
+  };
+}
+
+function pushSampleItemId(stats, itemId) {
+  if (!stats || !itemId) return;
+  if (stats.sampleItemIds.includes(itemId)) return;
+  if (stats.sampleItemIds.length >= 6) return;
+  stats.sampleItemIds.push(itemId);
+}
+
 function extractMediaStreams(item) {
   if (Array.isArray(item?.MediaStreams) && item.MediaStreams.length) {
     return item.MediaStreams;
@@ -141,7 +170,7 @@ function isSeriesLikeType(item) {
   return type === "series" || type === "season";
 }
 
-async function fetchFirstEpisodeForParent(parentId) {
+async function fetchFirstEpisodeForParent(parentId, stats = null) {
   const key = text(parentId);
   const userId = getCurrentUserId();
   if (!key || !userId) return null;
@@ -149,23 +178,39 @@ async function fetchFirstEpisodeForParent(parentId) {
 
   const payload = await makeApiRequest(
     `/Users/${encodeURIComponent(userId)}/Items?ParentId=${encodeURIComponent(key)}&IncludeItemTypes=Episode&Recursive=true&SortBy=SortName&SortOrder=Ascending&Limit=1&Fields=MediaStreams,MediaSources,Type`
-  ).catch(() => null);
+  ).catch((error) => {
+    stats && (stats.fetchFailureCount += 1);
+    void emitClientDiagnostic({
+      scope: "audio-flags",
+      event: "episode-fallback-fetch-failed",
+      level: "warning",
+      message: "Failed to fetch a representative episode for an audio badge fallback.",
+      data: {
+        parentId: key,
+        status: Number(error?.status) || 0,
+        error: text(error?.message).slice(0, 180)
+      }
+    });
+    return null;
+  });
 
   const episode = Array.isArray(payload?.Items) ? payload.Items[0] || null : null;
   if (episode) {
     episodeCache.set(key, episode);
+    stats && (stats.seriesFallbackCount += 1);
   } else {
     episodeCache.delete(key);
+    stats && (stats.seriesFallbackMissCount += 1);
   }
   return episode;
 }
 
-async function resolveAudioSourceItem(item) {
+async function resolveAudioSourceItem(item, stats = null) {
   if (!item) return null;
   if (extractMediaStreams(item).length > 0) return item;
   if (!isSeriesLikeType(item)) return item;
 
-  const episode = await fetchFirstEpisodeForParent(item.Id);
+  const episode = await fetchFirstEpisodeForParent(item.Id, stats);
   return episode || item;
 }
 
@@ -247,27 +292,52 @@ function isCardVisible(card) {
   return rect.bottom >= -140 && rect.top <= (window.innerHeight || 0) + 140 && rect.width > 20 && rect.height > 20;
 }
 
-async function fetchItem(itemId) {
+async function fetchItem(itemId, stats = null) {
   if (!itemId) return null;
   if (itemCache.has(itemId)) return itemCache.get(itemId);
   if (itemPromises.has(itemId)) return itemPromises.get(itemId);
 
   const promise = (async () => {
+    let fetchError = null;
     let item = await makeApiRequest(
       `/Items/${encodeURIComponent(itemId)}?Fields=MediaStreams,MediaSources,Type`
-    ).catch(() => null);
+    ).catch((error) => {
+      fetchError = error;
+      return null;
+    });
 
     if ((!item || !extractMediaStreams(item).length) && getCurrentUserId()) {
       const userId = getCurrentUserId();
       item = await makeApiRequest(
         `/Users/${encodeURIComponent(userId)}/Items/${encodeURIComponent(itemId)}?Fields=MediaStreams,MediaSources,Type`
-      ).catch(() => item);
+      ).catch((error) => {
+        fetchError = fetchError || error;
+        return item;
+      });
     }
 
     if (item) {
       itemCache.set(itemId, item);
     } else {
       itemCache.delete(itemId);
+      if (stats) {
+        stats.fetchFailureCount += 1;
+        pushSampleItemId(stats, itemId);
+      }
+      if (fetchError) {
+        void emitClientDiagnostic({
+          scope: "audio-flags",
+          event: "item-fetch-failed",
+          level: "warning",
+          message: "Audio badge item fetch returned no usable payload.",
+          data: {
+            itemId,
+            status: Number(fetchError?.status) || 0,
+            error: text(fetchError?.message).slice(0, 180),
+            userIdPresent: !!getCurrentUserId()
+          }
+        });
+      }
     }
     itemPromises.delete(itemId);
     return item || null;
@@ -320,7 +390,7 @@ function collectCardScopes(root = document) {
   return Array.from(cards);
 }
 
-async function annotateCard(card) {
+async function annotateCard(card, stats = null) {
   const { cardsEnabled, maxCount } = getRuntimeOptions();
   const host = getCardHost(card);
   if (!host) return;
@@ -332,23 +402,30 @@ async function annotateCard(card) {
 
   const itemId = getItemId(card);
   if (!itemId) {
+    stats && (stats.missingItemIdCount += 1);
     removeBadgeStrip(host);
     return;
   }
 
-  const item = await fetchItem(itemId);
-  const audioSource = await resolveAudioSourceItem(item);
+  stats && (stats.annotatedCardCount += 1);
+  pushSampleItemId(stats, itemId);
+
+  const item = await fetchItem(itemId, stats);
+  const audioSource = await resolveAudioSourceItem(item, stats);
   if (!isLikelyMediaType(audioSource)) {
+    stats && (stats.noMediaCount += 1);
     removeBadgeStrip(host);
     return;
   }
 
   const badges = createAudioLanguageBadges(extractMediaStreams(audioSource), { maxCount });
   if (!badges.length) {
+    stats && (stats.noBadgeCount += 1);
     removeBadgeStrip(host);
     return;
   }
 
+  stats && (stats.renderedCardCount += 1);
   renderBadgeStrip(host, badges);
 }
 
@@ -375,49 +452,56 @@ function getDetailBadgeAnchor(page) {
 
 async function refreshVisibleCards() {
   ensureStyles();
+  const stats = createRefreshStats("cards");
 
   const cards = collectCardScopes(document)
     .filter((card) => isCardVisible(card))
     .slice(0, 64);
+  stats.visibleCardCount = cards.length;
 
-  await Promise.allSettled(cards.map((card) => annotateCard(card)));
+  await Promise.allSettled(cards.map((card) => annotateCard(card, stats)));
+  return stats;
 }
 
 async function refreshDetailBadges() {
   ensureStyles();
+  const stats = createRefreshStats("detail");
 
   const { detailsEnabled, maxCount } = getRuntimeOptions();
   const page = getVisibleDetailPage();
-  if (!(page instanceof HTMLElement)) return;
+  if (!(page instanceof HTMLElement)) return stats;
 
   const title = getDetailBadgeAnchor(page);
   const parent = title?.parentElement || page;
   if (!detailsEnabled) {
     removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
-    return;
+    return stats;
   }
 
   const itemId = getDetailItemId();
+  stats.detailItemId = itemId;
   if (!itemId) {
     removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
-    return;
+    return stats;
   }
 
-  const item = await fetchItem(itemId);
-  const audioSource = await resolveAudioSourceItem(item);
+  const item = await fetchItem(itemId, stats);
+  const audioSource = await resolveAudioSourceItem(item, stats);
   if (!isLikelyMediaType(audioSource)) {
+    stats.detailFetchFailed = !item;
     removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
-    return;
+    return stats;
   }
 
   const badges = createAudioLanguageBadges(extractMediaStreams(audioSource), { maxCount });
   if (!badges.length) {
+    stats.detailNoBadges = true;
     removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
-    return;
+    return stats;
   }
 
   if (!(title instanceof HTMLElement) || !(parent instanceof HTMLElement)) {
-    return;
+    return stats;
   }
 
   let strip = parent.querySelector(`.${DETAIL_BADGE_CLASS}`);
@@ -427,13 +511,53 @@ async function refreshDetailBadges() {
     title.insertAdjacentElement("afterend", strip);
   }
   renderBadgeStrip(parent, badges, DETAIL_BADGE_CLASS);
+  stats.detailRendered = true;
+  return stats;
+}
+
+async function maybeReportAudioDiagnostics(cardStats, detailStats) {
+  const verbose = isClientDiagnosticsVerboseEnabled();
+  const suspiciousCards =
+    cardStats.visibleCardCount > 0 &&
+    cardStats.renderedCardCount === 0 &&
+    (
+      cardStats.fetchFailureCount > 0 ||
+      cardStats.seriesFallbackCount > 0 ||
+      !cardStats.userIdPresent
+    );
+  const suspiciousDetail =
+    !!detailStats.detailItemId &&
+    !detailStats.detailRendered &&
+    (detailStats.detailFetchFailed || detailStats.fetchFailureCount > 0);
+
+  if (!suspiciousCards && !suspiciousDetail && !verbose) {
+    return;
+  }
+
+  await emitClientDiagnostic({
+    scope: "audio-flags",
+    event: suspiciousCards || suspiciousDetail ? "badge-refresh-suspect" : "badge-refresh-summary",
+    level: suspiciousCards || suspiciousDetail ? "warning" : "info",
+    message: suspiciousCards || suspiciousDetail
+      ? "Audio badge refresh finished without visible output on a page that should have been eligible."
+      : "Audio badge refresh summary.",
+    data: {
+      cards: cardStats,
+      detail: detailStats
+    }
+  });
 }
 
 export function refreshAudioLanguageBadges() {
   clearTimeout(refreshTimer);
   refreshTimer = window.setTimeout(() => {
-    void refreshVisibleCards();
-    void refreshDetailBadges();
+    void (async () => {
+      const [cardStats, detailStats] = await Promise.all([
+        refreshVisibleCards(),
+        refreshDetailBadges()
+      ]);
+      await maybeReportAudioDiagnostics(cardStats, detailStats);
+    })();
   }, 80);
 }
 

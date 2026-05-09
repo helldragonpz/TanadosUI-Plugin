@@ -5,6 +5,7 @@ import {
   subscribeRuntimeConfig
 } from "./runtimeConfig.js";
 import { faIconHtml } from "./faIcons.js";
+import { emitClientDiagnostic, isClientDiagnosticsVerboseEnabled } from "./clientDiagnostics.js";
 
 const DEFAULTS = getDefaultRuntimeConfig();
 const ROOT_ATTR = "data-tanados-ui-brand";
@@ -100,6 +101,7 @@ const SHELL_ROLE_RULES = [
 
 let brandingObserver = null;
 let applyTimer = 0;
+let drawerDiagnosticTimer = 0;
 
 function text(value) {
   return String(value ?? "").trim();
@@ -391,6 +393,100 @@ function decorateDrawerNavigation() {
   });
 }
 
+function isElementVisible(el) {
+  if (!(el instanceof HTMLElement)) return false;
+  const style = getComputedStyle(el);
+  const rect = el.getBoundingClientRect?.();
+  if (!rect) return false;
+  return (
+    style.display !== "none" &&
+    style.visibility !== "hidden" &&
+    Number(style.opacity || "1") > 0.01 &&
+    rect.width > 8 &&
+    rect.height > 8
+  );
+}
+
+function collectDrawerSnapshot() {
+  const drawer = document.querySelector(".mainDrawer");
+  if (!(drawer instanceof HTMLElement)) {
+    return null;
+  }
+
+  const navItems = Array.from(drawer.querySelectorAll(DRAWER_NAV_SELECTOR)).filter((el) => el instanceof HTMLElement);
+  const labels = Array.from(drawer.querySelectorAll(".TanadosUI-shell-label, .navMenuOptionText, .sectionName, .listItemBodyText, .btnText"))
+    .filter((el) => el instanceof HTMLElement);
+  const icons = Array.from(drawer.querySelectorAll(".TanadosUI-drawer-icon, .TanadosUI-drawer-native-icon, .navMenuOptionIcon, .listItemIcon"))
+    .filter((el) => el instanceof HTMLElement);
+  const scrollContainer = drawer.querySelector(".mainDrawer-scrollContainer");
+  const computed = getComputedStyle(drawer);
+  const rect = drawer.getBoundingClientRect?.();
+  const visibleNavItems = navItems.filter(isElementVisible);
+  const visibleLabels = labels.filter((label) => isElementVisible(label) && text(label.textContent));
+
+  return {
+    drawerClass: text(drawer.className).slice(0, 240),
+    bodyClass: text(document.body?.className).slice(0, 240),
+    htmlClass: text(document.documentElement?.className).slice(0, 240),
+    position: computed.position,
+    display: computed.display,
+    visibility: computed.visibility,
+    opacity: computed.opacity,
+    transform: text(computed.transform).slice(0, 180),
+    pointerEvents: computed.pointerEvents,
+    width: Math.round(rect?.width || drawer.offsetWidth || 0),
+    height: Math.round(rect?.height || drawer.offsetHeight || 0),
+    navCount: navItems.length,
+    visibleNavCount: visibleNavItems.length,
+    labelCount: labels.length,
+    visibleLabelCount: visibleLabels.length,
+    iconCount: icons.length,
+    scrollContainerCount: drawer.querySelectorAll(".mainDrawer-scrollContainer").length,
+    scrollContainerChildren: scrollContainer?.childElementCount || 0,
+    sampleLabels: visibleLabels.slice(0, 6).map((label) => text(label.textContent).slice(0, 48))
+  };
+}
+
+function isDrawerSnapshotSuspicious(snapshot) {
+  if (!snapshot) return false;
+  if (snapshot.navCount <= 0) return true;
+  if (snapshot.visibleNavCount <= 0) return true;
+  if (snapshot.visibleLabelCount <= 0 && snapshot.iconCount <= 0) return true;
+  if (snapshot.display === "none" || snapshot.visibility === "hidden") return true;
+  if (Number(snapshot.opacity || "1") <= 0.01) return true;
+  if ((snapshot.width || 0) < 96) return true;
+  return false;
+}
+
+async function reportDrawerDiagnostics(reason = "apply", force = false) {
+  const snapshot = collectDrawerSnapshot();
+  if (!snapshot) return;
+
+  const suspicious = isDrawerSnapshotSuspicious(snapshot);
+  if (!suspicious && !force && !isClientDiagnosticsVerboseEnabled()) {
+    return;
+  }
+
+  await emitClientDiagnostic({
+    scope: "branding",
+    event: suspicious ? "drawer-suspect" : "drawer-snapshot",
+    level: suspicious ? "warning" : "info",
+    message: suspicious ? "Drawer shell is present but its menu content looks unusable." : "Drawer shell diagnostic snapshot.",
+    data: {
+      reason,
+      ...snapshot
+    },
+    force
+  });
+}
+
+function queueDrawerDiagnostics(reason = "apply", delayMs = 160, force = false) {
+  clearTimeout(drawerDiagnosticTimer);
+  drawerDiagnosticTimer = window.setTimeout(() => {
+    void reportDrawerDiagnostics(reason, force);
+  }, delayMs);
+}
+
 function applyBranding(runtime = currentRuntime()) {
   applyRootRuntime(runtime);
   applyFavicons(runtime);
@@ -400,6 +496,7 @@ function applyBranding(runtime = currentRuntime()) {
   applyBrandText(runtime);
   decorateTopNavTabs();
   decorateDrawerNavigation();
+  queueDrawerDiagnostics("apply");
 }
 
 function queueApplyBranding(runtime = currentRuntime(), delayMs = 48) {
@@ -449,7 +546,10 @@ if (document.readyState === "loading") {
 
 window.addEventListener("load", () => applyBranding(currentRuntime()), { once: true });
 window.addEventListener("pageshow", () => applyBranding(currentRuntime()), { passive: true });
-window.addEventListener("hashchange", () => queueApplyBranding(currentRuntime()), { passive: true });
+window.addEventListener("hashchange", () => {
+  queueApplyBranding(currentRuntime());
+  queueDrawerDiagnostics("hashchange");
+}, { passive: true });
 startObserver();
 
 window.TanadosUIBranding = {
@@ -458,6 +558,9 @@ window.TanadosUIBranding = {
   },
   apply() {
     applyBranding(currentRuntime());
+  },
+  inspectDrawer(force = true) {
+    queueDrawerDiagnostics("manual", 16, force);
   },
   defaults: {
     headerLogoUrl: LOCAL_HEADER_LOGO_URL,

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-2.9.0.6}"
+VERSION="${1:-2.9.0.7}"
 REPO_SLUG="${REPO_SLUG:-helldragonpz/TanadosUI-Plugin}"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"

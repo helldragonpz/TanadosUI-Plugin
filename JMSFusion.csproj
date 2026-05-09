@@ -7,7 +7,7 @@
     <AssemblyName>Jellyfin.Plugin.TanadosUI</AssemblyName>
     <RootNamespace>Jellyfin.Plugin.TanadosUI</RootNamespace>
 
-    <Version>2.9.0.6</Version>
+    <Version>2.9.0.7</Version>
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <FileVersion>$(Version)</FileVersion>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>

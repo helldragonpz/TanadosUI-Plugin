@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
     "versions": [
       {
+        "version": "2.9.0.7",
+        "changelog": "v2.9.0.7\n\nDiagnostics release:\n- Added a new TanadosUI client diagnostics endpoint so broken UI state can be reported directly into the Jellyfin server log\n- Added automatic warning logs for suspicious sidebar drawer state, including drawer visibility, nav item counts, label counts, and computed shell styles\n- Added automatic warning logs for audio flag fetch and fallback failures, plus summary diagnostics when badge refresh finishes with no visible output\n- Added an opt-in verbose browser debug mode through `localStorage.setItem('tanados_ui_debug', '1')` for deeper client traces without enabling noisy logs for everyone\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.7/TanadosUI-2.9.0.7-server.zip",
+        "checksum": "762dd107e43312ed08e6939ff8424d33",
+        "timestamp": "2026-05-09T07:37:16Z"
+      },
+      {
         "version": "2.9.0.6",
         "changelog": "v2.9.0.6\n\nHotfixes:\n- Fixed the invisible side menu regression by preserving Jellyfin's native fixed nav-drawer positioning instead of overriding `.mainDrawer` with `position: relative`\n- Kept the safer native drawer markup styling and realistic drawer smoke coverage from the previous hotfix so sidebar buttons and labels stay visible over the glass shell\n- Kept the series and season audio flag fallback plus auth-aware badge cache refresh logic\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
         "targetAbi": "10.11.0.0",
