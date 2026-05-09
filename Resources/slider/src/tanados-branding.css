@@ -74,6 +74,7 @@ html[data-tanados-ui-brand="1"] .mainDrawer::before {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 0;
   pointer-events: none;
   background:
     linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 28%),
@@ -86,6 +87,21 @@ html[data-tanados-ui-brand="1"] .mainDrawer {
   box-shadow:
     0 26px 80px rgba(2, 0, 12, 0.52),
     inset -1px 0 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+html[data-tanados-ui-brand="1"] .mainDrawer > *,
+html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawer-scrollContainer,
+html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawerContent,
+html[data-tanados-ui-brand="1"] .mainDrawer .drawerContent,
+html[data-tanados-ui-brand="1"] .mainDrawer .libraryMenuOptions {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawer-scrollContainer,
+html[data-tanados-ui-brand="1"] .mainDrawer .mainDrawerContent {
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOption,
@@ -129,8 +145,10 @@ html[data-tanados-ui-brand="1"] .mainDrawer [aria-current="page"] {
 }
 
 html[data-tanados-ui-brand="1"] .mainDrawer .listItemIcon,
+html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOptionIcon,
 html[data-tanados-ui-brand="1"] .TanadosUI-drawer-icon,
-html[data-tanados-ui-brand="1"] .TanadosUI-shell-icon {
+html[data-tanados-ui-brand="1"] .TanadosUI-shell-icon,
+html[data-tanados-ui-brand="1"] .TanadosUI-drawer-native-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -145,11 +163,21 @@ html[data-tanados-ui-brand="1"] .TanadosUI-shell-icon {
 
 html[data-tanados-ui-brand="1"] .TanadosUI-shell-icon-fa,
 html[data-tanados-ui-brand="1"] .mainDrawer .listItemIcon i,
-html[data-tanados-ui-brand="1"] .mainDrawer .listItemIcon svg {
+html[data-tanados-ui-brand="1"] .mainDrawer .listItemIcon svg,
+html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOptionIcon,
+html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOptionIcon i,
+html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOptionIcon svg {
   color: inherit !important;
 }
 
-html[data-tanados-ui-brand="1"] .TanadosUI-shell-label {
+html[data-tanados-ui-brand="1"] .TanadosUI-shell-label,
+html[data-tanados-ui-brand="1"] .mainDrawer .navMenuOptionText,
+html[data-tanados-ui-brand="1"] .mainDrawer .sectionName,
+html[data-tanados-ui-brand="1"] .mainDrawer .listItemBodyText,
+html[data-tanados-ui-brand="1"] .mainDrawer .btnText {
+  color: inherit !important;
+  opacity: 1 !important;
+  visibility: visible !important;
   min-width: 0;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -194,7 +222,6 @@ html[data-tanados-ui-brand="1"] .embyLogo,
 html[data-tanados-ui-brand="1"] .adminDrawerLogo,
 html[data-tanados-ui-brand="1"] .mainDrawerLogo,
 html[data-tanados-ui-brand="1"] .drawerLogo,
-html[data-tanados-ui-brand="1"] [class*="drawerLogo"],
 html[data-tanados-ui-brand="1"] [data-tanados-brand="surface"] {
   background-image: var(--tanados-runtime-logo-url) !important;
   background-repeat: no-repeat !important;
@@ -215,7 +242,7 @@ html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .headerLogo,
 html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .embyLogo,
 html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .mainDrawerLogo,
 html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .drawerLogo,
-html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] [class*="drawerLogo"] {
+html[data-tanados-ui-brand="1"][data-tanados-header-logo="0"] .adminDrawerLogo {
   background-image: none !important;
   color: var(--tanados-text) !important;
   min-width: auto !important;
@@ -226,8 +253,7 @@ html[data-tanados-ui-brand="1"] .headerLogo::before,
 html[data-tanados-ui-brand="1"] .embyLogo::before,
 html[data-tanados-ui-brand="1"] .adminDrawerLogo::before,
 html[data-tanados-ui-brand="1"] .mainDrawerLogo::before,
-html[data-tanados-ui-brand="1"] .drawerLogo::before,
-html[data-tanados-ui-brand="1"] [class*="drawerLogo"]::before {
+html[data-tanados-ui-brand="1"] .drawerLogo::before {
   content: "" !important;
 }
 
@@ -237,7 +263,6 @@ html[data-tanados-ui-brand="1"] .embyLogo img,
 html[data-tanados-ui-brand="1"] .adminDrawerLogo img,
 html[data-tanados-ui-brand="1"] .mainDrawerLogo img,
 html[data-tanados-ui-brand="1"] .drawerLogo img,
-html[data-tanados-ui-brand="1"] [class*="drawerLogo"] img,
 html[data-tanados-ui-brand="1"] img[data-tanados-brand="image"] {
   object-fit: contain !important;
   max-width: 220px !important;

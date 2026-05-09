@@ -8,11 +8,27 @@
   </head>
   <body>
     <aside class="mainDrawer">
-      <div class="mainDrawerLogo">Jellyfin</div>
-      <a class="navMenuOption" href="#/home">Home</a>
-      <a class="navMenuOption" href="#/movies">Movies</a>
-      <a class="navMenuOption" href="#/series">Series</a>
-      <a class="navMenuOption" href="#/dashboard">Dashboard</a>
+      <div class="mainDrawer-scrollContainer">
+        <div class="mainDrawerLogo">Jellyfin</div>
+        <nav class="libraryMenuOptions">
+          <a class="navMenuOption lnkMediaFolder emby-button" href="#/home">
+            <span class="navMenuOptionIcon material-icons" aria-hidden="true">home</span>
+            <span class="sectionName navMenuOptionText">Home</span>
+          </a>
+          <a class="navMenuOption lnkMediaFolder emby-button" href="#/movies">
+            <span class="navMenuOptionIcon material-icons" aria-hidden="true">movie</span>
+            <span class="sectionName navMenuOptionText">Movies</span>
+          </a>
+          <a class="navMenuOption lnkMediaFolder emby-button" href="#/series">
+            <span class="navMenuOptionIcon material-icons" aria-hidden="true">tv</span>
+            <span class="sectionName navMenuOptionText">Series</span>
+          </a>
+          <a class="navMenuOption lnkMediaFolder emby-button" href="#/dashboard">
+            <span class="navMenuOptionIcon material-icons" aria-hidden="true">settings</span>
+            <span class="sectionName navMenuOptionText">Dashboard</span>
+          </a>
+        </nav>
+      </div>
     </aside>
     <header class="skinHeader">
       <div class="headerLogo">Jellyfin</div>

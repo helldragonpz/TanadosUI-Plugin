@@ -1,4 +1,9 @@
-import { makeApiRequest, getSessionInfo } from "../../Plugins/TanadosUI/runtime/api.js";
+import {
+  AUTH_PROFILE_CHANGED_EVENT,
+  USERDATA_CHANGED_EVENT,
+  makeApiRequest,
+  getSessionInfo
+} from "../../Plugins/TanadosUI/runtime/api.js";
 import { createAudioLanguageBadges } from "./audioLanguageUtils.js";
 import { fetchRuntimeConfig, getRuntimeConfigSnapshot, subscribeRuntimeConfig } from "./runtimeConfig.js";
 
@@ -33,6 +38,7 @@ const CARD_HOST_SELECTOR = ".cardImageContainer, .cardOverlayContainer, .cardPad
 
 const itemCache = new Map();
 const itemPromises = new Map();
+const episodeCache = new Map();
 let refreshTimer = 0;
 let observer = null;
 
@@ -124,6 +130,43 @@ function extractMediaStreams(item) {
   }
 
   return [];
+}
+
+function getItemType(item) {
+  return text(item?.Type).toLowerCase();
+}
+
+function isSeriesLikeType(item) {
+  const type = getItemType(item);
+  return type === "series" || type === "season";
+}
+
+async function fetchFirstEpisodeForParent(parentId) {
+  const key = text(parentId);
+  const userId = getCurrentUserId();
+  if (!key || !userId) return null;
+  if (episodeCache.has(key)) return episodeCache.get(key);
+
+  const payload = await makeApiRequest(
+    `/Users/${encodeURIComponent(userId)}/Items?ParentId=${encodeURIComponent(key)}&IncludeItemTypes=Episode&Recursive=true&SortBy=SortName&SortOrder=Ascending&Limit=1&Fields=MediaStreams,MediaSources,Type`
+  ).catch(() => null);
+
+  const episode = Array.isArray(payload?.Items) ? payload.Items[0] || null : null;
+  if (episode) {
+    episodeCache.set(key, episode);
+  } else {
+    episodeCache.delete(key);
+  }
+  return episode;
+}
+
+async function resolveAudioSourceItem(item) {
+  if (!item) return null;
+  if (extractMediaStreams(item).length > 0) return item;
+  if (!isSeriesLikeType(item)) return item;
+
+  const episode = await fetchFirstEpisodeForParent(item.Id);
+  return episode || item;
 }
 
 function getItemId(target) {
@@ -294,12 +337,13 @@ async function annotateCard(card) {
   }
 
   const item = await fetchItem(itemId);
-  if (!isLikelyMediaType(item)) {
+  const audioSource = await resolveAudioSourceItem(item);
+  if (!isLikelyMediaType(audioSource)) {
     removeBadgeStrip(host);
     return;
   }
 
-  const badges = createAudioLanguageBadges(extractMediaStreams(item), { maxCount });
+  const badges = createAudioLanguageBadges(extractMediaStreams(audioSource), { maxCount });
   if (!badges.length) {
     removeBadgeStrip(host);
     return;
@@ -360,12 +404,13 @@ async function refreshDetailBadges() {
   }
 
   const item = await fetchItem(itemId);
-  if (!isLikelyMediaType(item)) {
+  const audioSource = await resolveAudioSourceItem(item);
+  if (!isLikelyMediaType(audioSource)) {
     removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
     return;
   }
 
-  const badges = createAudioLanguageBadges(extractMediaStreams(item), { maxCount });
+  const badges = createAudioLanguageBadges(extractMediaStreams(audioSource), { maxCount });
   if (!badges.length) {
     removeBadgeStrip(parent, DETAIL_BADGE_CLASS);
     return;
@@ -421,6 +466,17 @@ export function initAudioLanguageBadges() {
   document.addEventListener("viewshow", refreshAudioLanguageBadges, { passive: true });
   document.addEventListener("viewshown", refreshAudioLanguageBadges, { passive: true });
   window.addEventListener("scroll", refreshAudioLanguageBadges, { passive: true });
+  document.addEventListener(AUTH_PROFILE_CHANGED_EVENT, () => {
+    itemCache.clear();
+    itemPromises.clear();
+    episodeCache.clear();
+    refreshAudioLanguageBadges();
+  }, true);
+  document.addEventListener(USERDATA_CHANGED_EVENT, () => {
+    itemPromises.clear();
+    episodeCache.clear();
+    refreshAudioLanguageBadges();
+  }, true);
   subscribeRuntimeConfig(() => refreshAudioLanguageBadges());
 }
 

@@ -20,7 +20,6 @@ const BRAND_SURFACE_SELECTOR = [
   ".adminDrawerLogo",
   ".mainDrawerLogo",
   ".drawerLogo",
-  "[class*='drawerLogo']",
   ".skinHeader .headerLogo",
   ".skinHeader .pageTitleWithLogo",
   ".skinHeader .pageTitle"
@@ -32,7 +31,6 @@ const BRAND_IMAGE_SELECTOR = [
   ".adminDrawerLogo img",
   ".mainDrawerLogo img",
   ".drawerLogo img",
-  "[class*='drawerLogo'] img",
   ".skinHeader .headerLogo img",
   ".skinHeader .pageTitleWithLogo img"
 ].join(", ");
@@ -55,8 +53,7 @@ const TEXT_SELECTOR = [
   ".pageTitleWithLogo",
   "#loginPage .readOnlyContent h1",
   ".loginDisclaimerContainer h1",
-  ".adminDrawerLogo + .listItemBody",
-  ".mainDrawer [class*='drawerLogo']"
+  ".adminDrawerLogo + .listItemBody"
 ].join(", ");
 const TOP_NAV_SELECTOR = [
   ".skinHeader .emby-tab-button",
@@ -68,6 +65,23 @@ const DRAWER_NAV_SELECTOR = [
   ".mainDrawer .mainDrawerButton",
   ".mainDrawer .listItemButton",
   ".mainDrawer [role='menuitem']"
+].join(", ");
+const DRAWER_NATIVE_ICON_SELECTOR = [
+  ":scope > .navMenuOptionIcon",
+  ":scope > .listItemIcon",
+  ":scope > .material-icons.navMenuOptionIcon",
+  ":scope > .TanadosUI-drawer-icon",
+  ":scope > .TanadosUI-shell-icon",
+  ":scope > .fa-solid",
+  ":scope > .fa-regular",
+  ":scope > .fa-brands"
+].join(", ");
+const DRAWER_LABEL_SELECTOR = [
+  ":scope > .TanadosUI-shell-label",
+  ":scope > .navMenuOptionText",
+  ":scope > .sectionName",
+  ":scope > .listItemBodyText",
+  ":scope > .btnText"
 ].join(", ");
 const SHELL_ROLE_RULES = [
   { key: "calendar", icon: "fa-solid fa-calendar-days", href: ["tab=calendar"], text: ["calendar", "upcoming", "календар", "предстоящ"] },
@@ -330,11 +344,35 @@ function decorateDrawerNavigation() {
 
     el.dataset.tanadosShellRole = role.key;
 
-    const existingIcon = el.querySelector(":scope > .listItemIcon, :scope > .TanadosUI-drawer-icon, :scope > .TanadosUI-shell-icon, :scope > .fa-solid, :scope > .fa-regular, :scope > .fa-brands");
-    if (existingIcon) return;
-
     const label = ensureOriginalLabel(el);
     if (!label) return;
+
+    const nativeIcon = el.querySelector(DRAWER_NATIVE_ICON_SELECTOR);
+    if (nativeIcon instanceof HTMLElement) {
+      nativeIcon.classList.add("TanadosUI-drawer-native-icon");
+    }
+
+    const existingLabel = el.querySelector(DRAWER_LABEL_SELECTOR);
+    if (existingLabel instanceof HTMLElement) {
+      existingLabel.classList.add("TanadosUI-shell-label");
+    } else if (!el.children.length) {
+      const labelEl = document.createElement("span");
+      labelEl.className = "TanadosUI-shell-label";
+      labelEl.textContent = label;
+      el.replaceChildren(labelEl);
+    } else if (!nativeIcon) {
+      const textNodes = Array.from(el.childNodes).filter((node) => (
+        node?.nodeType === Node.TEXT_NODE && text(node.textContent)
+      ));
+      if (textNodes.length && el.children.length === 0) {
+        const labelEl = document.createElement("span");
+        labelEl.className = "TanadosUI-shell-label";
+        labelEl.textContent = label;
+        el.replaceChildren(labelEl);
+      }
+    }
+
+    if (nativeIcon) return;
 
     const icon = document.createElement("span");
     icon.className = "TanadosUI-drawer-icon";

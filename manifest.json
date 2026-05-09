@@ -9,6 +9,14 @@
     "imageUrl": "https://raw.githubusercontent.com/helldragonpz/TanadosUI-Plugin/master/img/icon.png",
     "versions": [
       {
+        "version": "2.9.0.5",
+        "changelog": "v2.9.0.5\n\nHotfixes:\n- Fixed the Tanados sidebar shell again by styling native Jellyfin drawer markup safely, keeping the real drawer content above the glass overlay, and restoring visible sidebar buttons and labels\n- Fixed audio language flags for series and seasons by resolving a representative episode when the parent item itself has no audio streams\n- Cleared audio badge caches on auth and userdata changes so flags recover after login or token churn instead of getting stuck empty\n- Updated browser smoke coverage to use a more realistic Jellyfin drawer fixture and validate series audio badge fallback alongside the existing branding, runtime shell, upcoming, and recent-row checks\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/helldragonpz/TanadosUI-Plugin/releases/download/2.9.0.5/TanadosUI-2.9.0.5-server.zip",
+        "checksum": "0c4ff0da28251f44e60b379077353fff",
+        "timestamp": "2026-05-09T06:30:22Z"
+      },
+      {
         "version": "2.9.0.4",
         "changelog": "v2.9.0.4\n\nHotfixes:\n- Fixed Sonarr and Radarr upcoming calendar posters so local Arr poster paths are proxied correctly and remote poster URLs fall back cleanly when needed\n- Fixed the missing Tanados sidebar regression by narrowing the glass-shell drawer styling to real navigation items instead of all links and buttons inside the drawer\n- Fixed audio language flags on cards and native details pages by reading media streams from both item payloads and media sources, retrying after auth warmup, and avoiding stale null caches\n- Updated browser smoke coverage to validate the current audio badge item shape alongside branding, runtime shell, upcoming, and recent-row checks\n\nNotes:\n- Restart Jellyfin after installing or updating\n- Refresh Jellyfin Web after updating so the new runtime assets are loaded",
         "targetAbi": "10.11.0.0",

@@ -28,7 +28,7 @@ const runtimeConfig = {
   audioFlagMaxCount: 2,
   preferredLang: "bg-BG",
   fallbackLang: "en-US",
-  version: "2.9.0.4"
+  version: "2.9.0.5"
 };
 
 const adminRuntimeConfig = {
@@ -163,6 +163,25 @@ const audioItemDetails = {
     Type: "Movie",
     MediaStreams: [
       { Type: "Audio", Language: "ru", IsDefault: true }
+    ]
+  },
+  "series-1": {
+    Id: "series-1",
+    Name: "Smoke Series One",
+    Type: "Series",
+    MediaStreams: []
+  },
+  "episode-series-1": {
+    Id: "episode-series-1",
+    Name: "Smoke Series One Episode One",
+    Type: "Episode",
+    MediaSources: [
+      {
+        MediaStreams: [
+          { Type: "Audio", Language: "en", IsDefault: true },
+          { Type: "Audio", Language: "ja" }
+        ]
+      }
     ]
   }
 };
@@ -347,10 +366,22 @@ async function installRecentRowsRoutes(page) {
   await page.route("**/Users/user-1/Items?**", async (route) => {
     const url = new URL(route.request().url());
     const itemTypes = url.searchParams.get("IncludeItemTypes") || "";
+    const parentId = url.searchParams.get("ParentId") || "";
     const ids = (url.searchParams.get("Ids") || "")
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean);
+
+    if (parentId === "series-1" && itemTypes === "Episode") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json; charset=utf-8",
+        body: JSON.stringify({
+          Items: [audioItemDetails["episode-series-1"]]
+        })
+      });
+      return;
+    }
 
     if (ids.length) {
       const selected = recentMovieItems.Items.filter((item) => ids.includes(item.Id));
@@ -409,7 +440,10 @@ test("login branding injection rewrites app surfaces without duplicating logos",
   await expect(page.locator("head link[rel='icon']")).toHaveAttribute("data-tanados-brand", "true");
   await expect(page.locator("#loginPage h1")).toContainText("Tanados UI");
   await expect(page.locator(".headerLogo")).toHaveCount(1);
-  await expect(page.locator(".mainDrawer .TanadosUI-drawer-icon")).toHaveCount(4);
+  await expect(page.locator(".mainDrawer .navMenuOptionText")).toHaveCount(4);
+  await expect(page.locator(".mainDrawer .navMenuOptionText").first()).toBeVisible();
+  await expect(page.locator(".mainDrawer .navMenuOptionIcon")).toHaveCount(4);
+  await expect(page.locator(".mainDrawer .TanadosUI-drawer-icon")).toHaveCount(0);
   await expect(page.locator(".emby-tabs-slider .TanadosUI-shell-icon")).toHaveCount(2);
 
   expect(pageErrors).toEqual([]);
@@ -603,10 +637,22 @@ test("audio language badges appear on cards and native details pages", async ({ 
     const rows = await import("/slider/modules/recentRows.js");
     await rows.mountRecentRowsLazy({ force: true });
     await import("/slider/modules/audioLanguageBadges.js");
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      `
+        <a class="card" data-item-id="series-1" href="#/details?id=series-1" style="display:block;width:220px;height:330px;">
+          <div class="cardBox" style="width:100%;height:100%;">
+            <div class="cardImageContainer" style="width:100%;height:100%;"></div>
+          </div>
+        </a>
+      `
+    );
+    window.dispatchEvent(new Event("scroll"));
   });
 
   await expect(page.locator('[data-item-id="movie-1"] .TanadosUI-audio-card-badges')).toContainText("BG");
   await expect(page.locator('[data-item-id="movie-1"] .TanadosUI-audio-card-badges')).toContainText("EN");
+  await expect(page.locator('[data-item-id="series-1"] .TanadosUI-audio-card-badges')).toContainText("EN");
 
   await page.evaluate(() => {
     document.body.insertAdjacentHTML(
